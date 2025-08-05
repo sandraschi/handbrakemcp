@@ -19,6 +19,7 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.8+
 - [HandBrakeCLI](https://handbrake.fr/downloads2.php) installed and in PATH
 - (Optional) [DXT CLI](https://github.com/anthropics/dxt) for packaging
@@ -26,12 +27,14 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
 ### Installation
 
 1. Clone the repository:
+
    ```powershell
    git clone https://github.com/yourusername/handbrakemcp.git
    cd handbrakemcp
    ```
 
 2. Create and activate a virtual environment:
+
    ```powershell
    # Windows
    python -m venv venv
@@ -43,11 +46,13 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
    ```
 
 3. Install the package in development mode:
+
    ```powershell
    pip install -e ".[dev]"
    ```
 
 4. Configure your environment:
+
    ```powershell
    Copy-Item .env.example .env
    # Edit .env with your configuration
@@ -64,6 +69,7 @@ uvicorn handbrake_mcp.main:app --reload
 ### Using the API
 
 Transcode a video:
+
 ```http
 POST /api/v1/transcode
 Content-Type: application/json

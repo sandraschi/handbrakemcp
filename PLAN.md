@@ -1,23 +1,29 @@
 # HandBrake MCP Server - Implementation Plan
 
 ## Phase 1: Project Setup
+
 1. Initialize repository
+
    ```bash
    mkdir -p handbrakemcp/src/handbrake_mcp/{api/v1/endpoints,core,models,services,utils}
    cd handbrakemcp
    git init
    ```
+
 2. Set up Python environment
+
    ```bash
    python -m venv venv
    .\venv\Scripts\activate  # Windows
    # or
    source venv/bin/activate  # Linux/Mac
    ```
+
 3. Create `pyproject.toml` with dependencies
 4. Set up basic project structure
 
 ## Phase 2: Core Functionality
+
 1. Implement HandBrake service wrapper
    - Subprocess management for HandBrakeCLI
    - Preset management
@@ -38,6 +44,7 @@
    - File path configurations
 
 ## Phase 3: API Layer
+
 1. FastAPI endpoints
    - POST /api/v1/transcode
    - GET /api/v1/jobs
@@ -51,6 +58,7 @@
    - Job completion events
 
 ## Phase 4: Integration Features
+
 1. Watch folder support
    - Monitor directories for new files
    - Automatic processing based on rules
@@ -62,12 +70,14 @@
    - Integration with existing MCP ecosystem
 
 ## Phase 5: Testing & Documentation
+
 1. Unit tests
 2. Integration tests
 3. API documentation
 4. User guide
 
 ## Phase 6: Deployment
+
 1. Docker container
 2. Systemd service file
 3. Installation script
@@ -76,6 +86,7 @@
 ## Technical Specifications
 
 ### Dependencies
+
 - Python 3.8+
 - HandBrakeCLI
 - FastAPI
@@ -85,6 +96,7 @@
 - pytest
 
 ### Project Structure
+
 ```
 handbrakemcp/
 ├── src/
@@ -123,6 +135,7 @@ handbrakemcp/
 ```
 
 ## Initial Implementation Steps
+
 1. Set up basic FastAPI application
 2. Implement HandBrake service with basic transcoding
 3. Add job management
@@ -133,6 +146,7 @@ handbrakemcp/
 8. Create documentation
 
 ## Future Enhancements
+
 1. Support for cloud storage
 2. Web interface
 3. Advanced job scheduling
