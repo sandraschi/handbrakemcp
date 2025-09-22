@@ -2,6 +2,9 @@
 import asyncio
 import json
 import logging
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -19,13 +22,18 @@ class NotificationRecipient(BaseModel):
 
 
 class NotificationService:
-    """Service for sending notifications."""
-    
+    """Service for sending notifications via webhooks and email."""
+
     def __init__(self):
         """Initialize the notification service."""
         self.recipients: List[NotificationRecipient] = []
         self.enabled_events: List[str] = settings.webhook_events
         self.session: Optional[aiohttp.ClientSession] = None
+        self.smtp_server: Optional[str] = None
+        self.smtp_port: Optional[int] = None
+        self.smtp_username: Optional[str] = None
+        self.smtp_password: Optional[str] = None
+        self.smtp_use_tls: bool = True
     
     async def initialize(self):
         """Initialize the notification service."""
@@ -92,13 +100,104 @@ class NotificationService:
             logger.error(f"Error sending webhook to {url}: {e}")
     
     async def _send_email(self, email: str, data: Dict[str, Any]):
-        """Send an email notification.
-        
-        Note: This is a placeholder. In a real implementation, you would use
-        an email service like SendGrid, Mailgun, or an SMTP server.
+        """Send an email notification using SMTP.
+
+        Args:
+            email: Recipient email address
+            data: Notification data to include in the email
+
+        Raises:
+            smtplib.SMTPException: If email sending fails
         """
-        logger.info(f"[EMAIL] To: {email}, Data: {json.dumps(data, indent=2)}")
-        # Implementation would go here
+        # If no SMTP configuration is set, log and skip
+        if not self.smtp_server:
+            logger.warning(f"Email notification skipped for {email}: SMTP not configured")
+            return
+
+        try:
+            # Create message
+            msg = MIMEMultipart()
+            msg['From'] = settings.email_sender or "handbrake-mcp@localhost"
+            msg['To'] = email
+            msg['Subject'] = f"HandBrake MCP Notification: {data.get('event', 'Unknown')}"
+
+            # Create HTML body
+            html_body = f"""
+            <html>
+            <body>
+            <h2>HandBrake MCP Notification</h2>
+            <p><strong>Event:</strong> {data.get('event', 'Unknown')}</p>
+            <p><strong>Timestamp:</strong> {data.get('timestamp', 'Unknown')}</p>
+            <h3>Details:</h3>
+            <pre>{json.dumps(data.get('data', {}), indent=2)}</pre>
+            </body>
+            </html>
+            """
+
+            # Create plain text fallback
+            text_body = f"""
+HandBrake MCP Notification
+
+Event: {data.get('event', 'Unknown')}
+Timestamp: {data.get('timestamp', 'Unknown')}
+
+Details:
+{json.dumps(data.get('data', {}), indent=2)}
+            """
+
+            # Attach parts
+            msg.attach(MIMEText(text_body, 'plain'))
+            msg.attach(MIMEText(html_body, 'html'))
+
+            # Send email
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                self._send_email_sync,
+                msg,
+                email
+            )
+
+            logger.info(f"Email notification sent to {email}")
+
+        except Exception as e:
+            logger.error(f"Failed to send email to {email}: {e}")
+            raise
+
+    def _send_email_sync(self, msg: MIMEMultipart, email: str):
+        """Synchronous email sending function for executor."""
+        try:
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port or 587)
+            server.starttls()  # Always use TLS
+
+            if self.smtp_username and self.smtp_password:
+                server.login(self.smtp_username, self.smtp_password)
+
+            server.sendmail(msg['From'], email, msg.as_string())
+            server.quit()
+
+        except Exception as e:
+            logger.error(f"SMTP error sending to {email}: {e}")
+            raise
+
+    def configure_smtp(self, server: str, port: Optional[int] = None,
+                      username: Optional[str] = None, password: Optional[str] = None,
+                      use_tls: bool = True):
+        """Configure SMTP settings for email notifications.
+
+        Args:
+            server: SMTP server hostname (e.g., 'smtp.gmail.com')
+            port: SMTP port (default: 587 for TLS)
+            username: SMTP username/email
+            password: SMTP password/app password
+            use_tls: Whether to use TLS encryption
+        """
+        self.smtp_server = server
+        self.smtp_port = port or 587
+        self.smtp_username = username
+        self.smtp_password = password
+        self.smtp_use_tls = use_tls
+        logger.info(f"SMTP configured for server: {server}")
 
 
 # Global instance

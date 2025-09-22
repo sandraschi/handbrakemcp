@@ -5,7 +5,7 @@
 
 ## 🎯 Project Overview
 
-Successfully implemented a FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. The server provides a robust solution for batch video processing with watch folder support and webhook notifications.
+Successfully implemented a FastMCP 2.12.0-compliant server for video transcoding using HandBrakeCLI. The server provides a robust solution for batch video processing with watch folder support and webhook notifications.
 
 ## ✅ Completed Features
 
@@ -19,7 +19,7 @@ Successfully implemented a FastMCP 2.10-compliant server for video transcoding u
 
 ### Technical Implementation
 
-- FastMCP 2.10 compliant API
+- FastMCP 2.10.1 compliant API
 - DXT packaging support
 - Comprehensive test suite
 - Development and deployment scripts

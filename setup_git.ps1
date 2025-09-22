@@ -13,7 +13,7 @@
 #>
 param(
     [string]$RepositoryName = "handbrakemcp",
-    [string]$Description = "A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI",
+    [string]$Description = "A FastMCP 2.12.0-compliant server for video transcoding using HandBrakeCLI",
     [bool]$Private = $true
 )
 

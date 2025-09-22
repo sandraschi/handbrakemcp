@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="HandBrake MCP Server",
-    description="FastMCP 2.10 compliant server for video transcoding with HandBrake",
+    description="FastMCP 2.12.0 compliant server for video transcoding with HandBrake",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -38,22 +38,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize FastMCP
-mcp = FastMCP(
-    name="handbrake-mcp",
-    version="0.1.0",
-    log_level=settings.log_level.upper(),
-)
+# FastMCP instance for stdio mode is in stdio_main.py
 
-# Import MCP tools to register them with FastMCP
-from handbrake_mcp import mcp_tools  # noqa: F401
+# MCP tools are not used in the main FastAPI server
 
 # Include API routers
 # from handbrake_mcp.api.v1.endpoints import router as api_router
 # app.include_router(api_router, prefix="/api/v1")
 
-# Mount MCP app
-app.mount("/mcp", mcp.app)
+# Mount MCP app - Note: This may need adjustment based on FastMCP 2.12.0 API
+# For now, commenting out as it may not be needed for stdio-only mode
+# app.mount("/mcp", mcp.app)
 
 
 async def process_new_file(file_path: Path):
@@ -105,6 +100,27 @@ async def shutdown_event():
     logger.info("HandBrake MCP server has been shut down")
 
 
+async def main():
+    """Main stdio server function."""
+    logger.info("Starting HandBrake MCP server (stdio mode)...")
+
+    # Initialize notification service
+    await notification_service.initialize()
+
+    # Initialize watch folders
+    if settings.watch_folders:
+        logger.info(f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}")
+        await watch_service.start(
+            callback=process_new_file,
+            watch_dirs=settings.watch_folders,
+        )
+
+    logger.info("HandBrake MCP server started successfully")
+
+    # Run the MCP server
+    # MCP server is not started in FastAPI mode
+
+
 # Health check endpoint
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check() -> dict:
@@ -112,17 +128,31 @@ async def health_check() -> dict:
     return {"status": "ok", "version": "0.1.0"}
 
 
-# MCP tools will be registered here using @mcp.tool() decorator
+# MCP tools are registered in stdio_main.py for stdio mode
 
 
-# For DXT compatibility
+# For DXT compatibility and dual mode support
 if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "handbrake_mcp.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=True,
-        log_level=settings.log_level.lower(),
-    )
+    if settings.mcp_transport.lower() == "stdio":
+        # Run in stdio mode for MCP clients
+        # Import and run the stdio server
+        from handbrake_mcp.stdio_main import main
+        try:
+            # Check if an event loop is already running
+            loop = asyncio.get_running_loop()
+            # If we're here, schedule the main function in the existing loop
+            loop.create_task(main())
+        except RuntimeError:
+            # No event loop running, so we can call main() for testing
+            asyncio.run(main())
+    else:
+        # Run in FastAPI mode for testing
+        import uvicorn
+
+        uvicorn.run(
+            "handbrake_mcp.main:app",
+            host=settings.mcp_host,
+            port=settings.mcp_port,
+            reload=True,
+            log_level=settings.log_level.lower(),
+        )

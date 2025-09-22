@@ -30,14 +30,19 @@ class WatchHandler(FileSystemEventHandler):
         """Called when a file or directory is created."""
         if event.is_directory:
             return
-        
+
         file_path = Path(event.src_path)
-        if self._should_process(file_path):
+        # Use asyncio.create_task to handle the async operation
+        asyncio.create_task(self._handle_new_file(file_path))
+
+    async def _handle_new_file(self, file_path: Path):
+        """Handle a new file asynchronously."""
+        if await self._should_process(file_path):
             logger.info(f"New file detected: {file_path}")
             self.processed_files.add(file_path)
             self.callback(file_path)
-    
-    def _should_process(self, file_path: Path) -> bool:
+
+    async def _should_process(self, file_path: Path) -> bool:
         """Check if a file should be processed."""
         # Skip if already processed
         if file_path in self.processed_files:

@@ -21,7 +21,7 @@ Create a Model Control Protocol (MCP) server for HandBrake video transcoding to 
 ## Technical Stack
 
 - Python 3.8+
-- FastMCP 2.10+
+- FastMCP 2.12.0+
 - HandBrakeCLI
 - Watchdog (for file system monitoring)
 - FastAPI (for web interface)

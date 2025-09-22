@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from handbrake_mcp.core.config import settings
-from handbrake_mcp.services.handbrake import handbrake_service, TranscodeJob
-from handbrake_mcp.services.notification_service import NotificationService
+from handbrake_mcp.services.handbrake import get_handbrake_service, TranscodeJob
+from handbrake_mcp.services.notification_service import NotificationService, NotificationRecipient
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,23 @@ class ProcessingService:
         self.notification_service = NotificationService()
         self.processed_files: List[Path] = []
         self._on_job_complete: Optional[Callable[[TranscodeJob], None]] = None
+
+        # Configure email notifications if settings are available
+        if (settings.smtp_server and settings.email_notifications and
+            settings.email_recipients):
+            self.notification_service.configure_smtp(
+                server=settings.smtp_server,
+                port=settings.smtp_port,
+                username=settings.smtp_username,
+                password=settings.smtp_password,
+                use_tls=settings.smtp_use_tls
+            )
+
+            # Add email recipients
+            for email in settings.email_recipients:
+                self.notification_service.add_recipient(
+                    NotificationRecipient(email=email)
+                )
     
     async def process_file(
         self,
@@ -53,7 +70,7 @@ class ProcessingService:
         output_path = output_dir / f"{input_path.stem}_converted.mkv"
         
         # Start the transcode job
-        job_id = await handbrake_service.transcode(
+        job_id = await get_handbrake_service().transcode(
             input_path=str(input_path),
             output_path=str(output_path),
             preset=preset or settings.default_preset,
@@ -61,7 +78,7 @@ class ProcessingService:
         )
         
         # Store job metadata
-        job = await handbrake_service.get_job_status(job_id)
+        job = await get_handbrake_service().get_job_status(job_id)
         if job:
             job.options = {
                 "delete_original": delete_original,
@@ -89,7 +106,7 @@ class ProcessingService:
     async def _monitor_job(self, job_id: str):
         """Monitor a job for completion and handle post-processing."""
         while True:
-            job = await handbrake_service.get_job_status(job_id)
+            job = await get_handbrake_service().get_job_status(job_id)
             if not job or job.status in ["completed", "failed", "cancelled"]:
                 break
             await asyncio.sleep(1)

@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![DXT Compatible](https://img.shields.io/badge/DXT-Compatible-brightgreen)](https://github.com/anthropics/dxt)
 
-A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part of the media processing toolchain.
+A FastMCP 2.12.0-compliant server for video transcoding using HandBrakeCLI. Part of the media processing toolchain.
 
 ## 🌟 Features
 
@@ -13,7 +13,7 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
 - **Batch Processing**: Process multiple files in sequence
 - **Watch Folders**: Automatically process new video files
 - **Progress Tracking**: Real-time job status updates
-- **MCP 2.10 Compliant**: Full compatibility with Model Control Protocol
+- **MCP 2.10.1 Compliant**: Full compatibility with Model Control Protocol
 - **DXT Ready**: Package as a Desktop Extension
 
 ## 🚀 Quick Start
@@ -21,8 +21,45 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
 ### Prerequisites
 
 - Python 3.8+
-- [HandBrakeCLI](https://handbrake.fr/downloads2.php) installed and in PATH
+- **HandBrakeCLI** - Video transcoding engine
 - (Optional) [DXT CLI](https://github.com/anthropics/dxt) for packaging
+
+### Installing HandBrakeCLI
+
+#### Windows
+```powershell
+# Using Windows Package Manager (recommended)
+winget install HandBrake.HandBrake.CLI
+
+# Verify installation
+HandBrakeCLI --version
+```
+
+#### macOS
+```bash
+# Using Homebrew
+brew install handbrake
+
+# Verify installation
+HandBrakeCLI --version
+```
+
+#### Linux (Ubuntu/Debian)
+```bash
+# Add HandBrake PPA
+sudo add-apt-repository ppa:stebbins/handbrake-releases
+sudo apt update
+sudo apt install handbrake-cli
+
+# Verify installation
+HandBrakeCLI --version
+```
+
+#### Manual Installation
+1. Download HandBrakeCLI from: https://handbrake.fr/downloads2.php
+2. Extract to a folder (e.g., `C:\Program Files\HandBrakeCLI`)
+3. Add to PATH or set `HBB_PATH` environment variable
+4. Verify: `HandBrakeCLI --version`
 
 ### Installation
 
@@ -54,8 +91,12 @@ A FastMCP 2.10-compliant server for video transcoding using HandBrakeCLI. Part o
 4. Configure your environment:
 
    ```powershell
+   # Copy the example configuration
    Copy-Item .env.example .env
+
    # Edit .env with your configuration
+   # Important: Set HBB_PATH to your HandBrakeCLI location if not in PATH
+   notepad .env
    ```
 
 ## 🛠️ Usage
