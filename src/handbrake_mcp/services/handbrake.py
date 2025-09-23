@@ -215,11 +215,18 @@ class HandBrakeService:
         # Convert to string for validation
         path_str = str(path)
 
-        # Security: Prevent dangerous characters
-        dangerous_chars = ['<', '>', ':', '"', '|', '?', '*']
+        # Security: Prevent dangerous characters (allow colon for Windows drive letters)
+        dangerous_chars = ['<', '>', '"', '|', '?', '*']
         for char in dangerous_chars:
             if char in path_str:
                 raise ValueError(f"Invalid characters in path: {path}")
+
+        # Allow single colon for Windows drive letters (e.g., C:\)
+        colon_count = path_str.count(':')
+        if colon_count > 1:
+            raise ValueError(f"Invalid path format: {path}")
+        if colon_count == 1 and not (len(path_str) > 1 and path_str[1] == ':'):
+            raise ValueError(f"Invalid colon usage in path: {path}")
 
         # Convert to Path object and resolve
         path_obj = Path(path).resolve()
