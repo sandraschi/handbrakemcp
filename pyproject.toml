@@ -93,3 +93,8 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 asyncio_mode = "auto"
 addopts = "-v --cov=handbrake_mcp --cov-report=term-missing"
+markers = [
+    "unit: Fast unit tests using mocks",
+    "integration: Real HandBrake CLI integration tests",
+    "slow: Tests that take longer to run"
+]

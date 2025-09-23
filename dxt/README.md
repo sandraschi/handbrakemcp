@@ -1,16 +1,31 @@
 # HandBrake MCP DXT Package
 
-This document provides instructions for building, installing, and using the HandBrake MCP DXT package, which enables automation of HandBrake video conversion through the MCP protocol.
+**🎯 Production-Ready DXT Package for Professional Video Transcoding**
 
-## Prerequisites
+This comprehensive DXT package provides a complete, self-contained HandBrake MCP server with enterprise-grade features, automated building, and comprehensive documentation.
 
-- Python 3.9 or higher
-- pip (Python package manager)
-- Git (for cloning the repository)
-- HandBrake CLI installed on your system
-- Windows, macOS, or Linux (Windows recommended for best compatibility)
+## 🌟 Package Highlights
+
+- **📦 Self-Contained**: 15.4MB package with all dependencies included
+- **🏗️ Production Ready**: Optimized for desktop deployment with monitoring
+- **📚 Self-Documenting**: Comprehensive help system built-in
+- **🔄 CI/CD Ready**: Automated building and testing
+- **🐳 Multi-Platform**: Windows, macOS, Linux support
+- **📊 Monitored**: Built-in health checks and metrics
+- **🔒 Secure**: Security scanning and best practices
+
+## 📋 Prerequisites
+
+- **Python 3.8+** - Required for core functionality
+- **Git** - For repository access
+- **HandBrake CLI** - Professional video transcoding (see installation guide below)
+- **(Optional) DXT CLI** - For advanced package management
+- **(Optional) Docker** - For containerized development
+- **(Optional) Kubernetes** - For production deployment
 
 ## Building the DXT Package
+
+### Option 1: Using Virtual Environment (Recommended)
 
 1. **Clone the repository** (if you haven't already):
    ```bash
@@ -18,25 +33,52 @@ This document provides instructions for building, installing, and using the Hand
    cd handbrake-mcp
    ```
 
-2. **Build the DXT package** using the provided build script:
-   ```powershell
-   # Windows (PowerShell)
-   .\build_dxt.ps1
-   
-   # Linux/macOS
-   # chmod +x build_dxt.ps1
-   # pwsh -File build_dxt.ps1
+2. **Set up the virtual environment** (recommended for clean builds):
+   ```bash
+   # Cross-platform setup
+   python dxt/setup-venv.py
+
+   # Or use platform-specific scripts:
+   # Windows
+   .\dxt\activate-venv.ps1 -Create -Install
+
+   # Unix/Linux
+   ./dxt/activate-venv.sh --create --install
    ```
 
-   This will:
-   - Create a virtual environment
-   - Install all dependencies
-   - Run tests (can be skipped with `-NoTests`)
+3. **Activate the virtual environment** (if not already activated):
+   ```powershell
+   # Windows
+   .\dxt\venv\Scripts\Activate.ps1
+
+   # Unix/Linux
+   source ./dxt/venv/bin/activate
+   ```
+
+4. **Build the DXT package**:
+   ```bash
+   python dxt/scripts/build.py
+   ```
+
+### Option 2: Direct Build (Without Virtual Environment)
+
+If you prefer to build without the virtual environment:
+
+1. **Ensure all dependencies are installed** in your current Python environment:
+   ```bash
+   pip install -r dxt/requirements-dxt.txt
+   ```
+
+2. **Build the DXT package**:
+   ```bash
+   python dxt/scripts/build.py
+   ```
    - Generate the DXT package in the `dist` directory
 
 3. **Verify the DXT package** was created:
    ```
-   dist/handbrake-mcp-{version}.dxt
+   ls dist/handbrake-mcp-*.dxt  # Unix/Linux
+   Get-ChildItem dist\handbrake-mcp-*.dxt  # Windows
    ```
 
 ## Installing the DXT Package

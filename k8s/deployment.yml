@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: handbrake-mcp
+  labels:
+    app: handbrake-mcp
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: handbrake-mcp
+  template:
+    metadata:
+      labels:
+        app: handbrake-mcp
+        version: v1
+    spec:
+      containers:
+      - name: handbrake-mcp
+        image: ghcr.io/sandraschi/handbrake-mcp:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: HBB_PATH
+          value: "HandBrakeCLI"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        - name: WATCH_FOLDERS
+          value: "/app/watch"
+        - name: PROCESSED_FOLDER
+          value: "/app/processed"
+        - name: MAX_CONCURRENT_JOBS
+          value: "3"
+        volumeMounts:
+        - name: watch-volume
+          mountPath: /app/watch
+        - name: processed-volume
+          mountPath: /app/processed
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: watch-volume
+        persistentVolumeClaim:
+          claimName: handbrake-watch-pvc
+      - name: processed-volume
+        persistentVolumeClaim:
+          claimName: handbrake-processed-pvc
+      - name: config-volume
+        configMap:
+          name: handbrake-config
+      securityContext:
+        fsGroup: 1000

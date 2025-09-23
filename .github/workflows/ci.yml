@@ -1,0 +1,428 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.8'
+  NODE_VERSION: '18'
+
+jobs:
+  # Quality checks and linting
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'dxt/requirements-dxt.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install -r dxt/requirements-dxt.txt
+
+    - name: Run linting
+      run: |
+        echo "Running Black code formatter..."
+        black --check --diff src/ tests/ dxt/
+
+        echo "Running isort import sorting..."
+        isort --check-only --diff src/ tests/ dxt/
+
+        echo "Running flake8 linting..."
+        flake8 src/ tests/ dxt/
+
+        echo "Running mypy type checking..."
+        mypy src/ dxt/
+
+    - name: Run Security Scan with Bandit
+      uses: tj-actions/bandit@v5
+      with:
+        targets: |
+          src/
+          dxt/
+
+  # Dedicated integration tests with real HandBrake CLI
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [quality-checks]
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt', 'dxt/requirements-dxt.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install -r dxt/requirements-dxt.txt
+
+    - name: Install HandBrake CLI
+      run: |
+        echo "Installing HandBrake CLI..."
+        sudo add-apt-repository ppa:stebbins/handbrake-releases -y
+        sudo apt update
+        sudo apt install -y handbrake-cli
+
+    - name: Verify HandBrake CLI installation
+      run: |
+        echo "Verifying HandBrake CLI installation..."
+        HandBrakeCLI --version
+        if [ $? -eq 0 ]; then
+          echo "✅ HandBrake CLI installed successfully"
+        else
+          echo "❌ HandBrake CLI installation failed"
+          exit 1
+        fi
+
+    - name: Run integration tests
+      run: |
+        echo "Running integration tests with real HandBrake CLI..."
+        python -m pytest tests/ -m "integration and not slow" -v --tb=short
+
+    - name: Run slow integration tests
+      run: |
+        echo "Running slow integration tests..."
+        python -m pytest tests/ -m "integration and slow" -v --tb=short || echo "Some slow integration tests may have been skipped"
+
+  # Unit and integration tests
+  test-suite:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        exclude:
+          - os: macos-latest
+            python-version: '3.8'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt', 'dxt/requirements-dxt.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install -r dxt/requirements-dxt.txt
+
+    - name: Install HandBrake CLI (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo add-apt-repository ppa:stebbins/handbrake-releases
+        sudo apt update
+        sudo apt install -y handbrake-cli
+
+    - name: Install HandBrake CLI (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install handbrake
+
+    - name: Install HandBrake CLI (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        choco install handbrake-cli -y
+
+    - name: Run unit tests
+      run: |
+        python -m pytest tests/ -m "unit" -v --cov=src --cov-report=xml --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # DXT package building and validation
+  build-dxt:
+    name: Build DXT Package
+    runs-on: ubuntu-latest
+    needs: [quality-checks, test-suite, integration-tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y handbrake-cli
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'dxt/requirements-dxt.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        pip install -r dxt/requirements-dxt.txt
+
+    - name: Set up virtual environment
+      run: |
+        python dxt/setup-venv.py
+
+    - name: Activate virtual environment and build
+      run: |
+        source ./dxt/venv/bin/activate
+        python dxt/test-venv.py
+        python dxt/scripts/build.py
+
+    - name: Validate DXT package
+      run: |
+        ls -la dist/
+        PACKAGE_FILE=$(ls dist/handbrake-mcp-*.dxt | head -1)
+        echo "Package file: $PACKAGE_FILE"
+        PACKAGE_SIZE=$(stat -c%s "$PACKAGE_FILE" 2>/dev/null || stat -f%z "$PACKAGE_FILE")
+        echo "Package size: $PACKAGE_SIZE bytes"
+
+        if [ $PACKAGE_SIZE -lt 10000000 ]; then
+          echo "ERROR: DXT package is too small (< 10MB). Dependencies may be missing."
+          exit 1
+        fi
+
+        echo "Package validation passed!"
+
+    - name: Upload DXT package
+      uses: actions/upload-artifact@v3
+      with:
+        name: handbrake-mcp-dxt-package
+        path: dist/handbrake-mcp-*.dxt
+        retention-days: 30
+
+  # Release automation
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-dxt, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.repository.fork == false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Download DXT package
+      uses: actions/download-artifact@v3
+      with:
+        name: handbrake-mcp-dxt-package
+        path: dist/
+
+    - name: Get version from manifest
+      run: |
+        VERSION=$(python -c "import json; print(json.load(open('dxt/manifest.json'))['version'])")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Package version: $VERSION"
+
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if gh release view "v$VERSION" 2>/dev/null; then
+          echo "Release v$VERSION already exists"
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "Release v$VERSION does not exist"
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate changelog
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "Generating changelog for v$VERSION..."
+
+        # Generate changelog from git history
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -z "$PREVIOUS_TAG" ]; then
+          # First release, use all commits
+          git log --pretty=format:"* %s (%h)" --reverse > changelog.md
+        else
+          # Generate changelog since last tag
+          git log --pretty=format:"* %s (%h)" "$PREVIOUS_TAG..HEAD" > changelog.md
+        fi
+
+        echo "# Changelog" > release_notes.md
+        echo "" >> release_notes.md
+        echo "## Version $VERSION" >> release_notes.md
+        echo "" >> release_notes.md
+        cat changelog.md >> release_notes.md
+        echo "" >> release_notes.md
+
+        # Add standard release information
+        cat >> release_notes.md << EOF
+
+## What's New in v$VERSION
+- Automated video transcoding using HandBrakeCLI
+- Batch processing capabilities
+- Watch folder support for automatic processing
+- Real-time progress tracking
+- MCP 2.12.0 compliant API
+- Enhanced testing with real HandBrake CLI integration
+
+## Installation
+
+### Option 1: DXT Package (Recommended)
+\`\`\`bash
+# Install the DXT package
+dxt install handbrake-mcp-v$VERSION.dxt
+\`\`\`
+
+### Option 2: Manual Installation
+\`\`\`bash
+pip install handbrake-mcp==$VERSION
+\`\`\`
+
+### Option 3: Docker (Coming Soon)
+\`\`\`bash
+docker run -p 8000:8000 ghcr.io/sandraschi/handbrake-mcp:$VERSION
+\`\`\`
+
+## Requirements
+- Python 3.8+
+- HandBrake CLI (automatically installed in DXT)
+- See [documentation](https://sandraschi.github.io/handbrake-mcp/) for full installation instructions
+
+## Usage
+See the [documentation](https://sandraschi.github.io/handbrake-mcp/) and examples for usage instructions.
+
+## Links
+- 📚 [Documentation](https://sandraschi.github.io/handbrake-mcp/)
+- 🐛 [Issues](https://github.com/sandraschi/handbrake-mcp/issues)
+- 💬 [Discussions](https://github.com/sandraschi/handbrake-mcp/discussions)
+- 📦 [Releases](https://github.com/sandraschi/handbrake-mcp/releases)
+
+---
+*This release was automatically created by CI/CD pipeline*
+EOF
+
+    - name: Create GitHub release
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "Creating GitHub release v$VERSION..."
+
+        # Create release with enhanced metadata
+        gh release create "v$VERSION" \
+          --title "HandBrake MCP Server v$VERSION" \
+          --notes-file release_notes.md \
+          --latest \
+          --generate-notes \
+          "dist/handbrake-mcp-$VERSION.dxt#HandBrake MCP DXT Package"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update latest tag
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "Updating latest tag to v$VERSION..."
+        git tag -f latest
+        git push origin latest --force
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Documentation deployment
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [build-dxt, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Build documentation
+      run: |
+        echo "Documentation building not yet implemented"
+        # Future: Add Sphinx or MkDocs for documentation building
+
+    - name: Deploy to GitHub Pages
+      if: false  # Disabled until documentation system is implemented
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html

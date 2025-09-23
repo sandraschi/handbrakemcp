@@ -1,0 +1,236 @@
+name: Release Validation
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to validate'
+        required: true
+        default: 'latest'
+
+env:
+  PYTHON_VERSION: '3.8'
+
+jobs:
+  # Validate the published release
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Get release info
+      id: release
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          VERSION="${{ github.event.release.tag_name }}"
+        else
+          VERSION="${{ github.event.inputs.version }}"
+        fi
+
+        if [ "$VERSION" = "latest" ]; then
+          # Get latest release
+          VERSION=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name')
+        fi
+
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Validating release: $VERSION"
+
+    - name: Download and validate DXT package
+      run: |
+        VERSION="${{ steps.release.outputs.version }}"
+        PACKAGE_URL="https://github.com/${{ github.repository }}/releases/download/$VERSION/handbrake-mcp-${VERSION#v}.dxt"
+
+        echo "Downloading DXT package: $PACKAGE_URL"
+        curl -L -o package.dxt "$PACKAGE_URL"
+
+        # Validate package exists and has reasonable size
+        if [ ! -f package.dxt ]; then
+          echo "❌ Package download failed"
+          exit 1
+        fi
+
+        SIZE=$(stat -c%s package.dxt)
+        if [ $SIZE -lt 10000000 ]; then
+          echo "❌ Package too small (${SIZE} bytes). Dependencies may be missing."
+          exit 1
+        fi
+
+        echo "✅ Package downloaded successfully (${SIZE} bytes)"
+
+    - name: Install and test DXT package
+      run: |
+        echo "Installing DXT package..."
+
+        # Install DXT if not available
+        if ! command -v dxt &> /dev/null; then
+          echo "Installing DXT..."
+          pip install dxt
+        fi
+
+        # Install the package
+        dxt install package.dxt --force
+
+        # Verify installation
+        if ! dxt list | grep -q handbrake; then
+          echo "❌ Package installation failed"
+          exit 1
+        fi
+
+        echo "✅ Package installed successfully"
+
+    - name: Test basic functionality
+      run: |
+        echo "Testing basic functionality..."
+
+        # Test version command
+        if ! handbrake-mcp-stdio --help > /dev/null; then
+          echo "❌ Basic command failed"
+          exit 1
+        fi
+
+        echo "✅ Basic functionality test passed"
+
+    - name: Update release with validation status
+      run: |
+        VERSION="${{ steps.release.outputs.version }}"
+
+        # Add validation success comment to release
+        gh release edit "$VERSION" \
+          --notes "**✅ Release Validation Passed**
+
+        This release has been validated and is ready for production use.
+
+        - Package integrity: ✅ Verified
+        - Installation: ✅ Successful
+        - Basic functionality: ✅ Working
+        - Validation timestamp: $(date -u)
+
+        **Installation:**
+        \`\`\`bash
+        dxt install handbrake-mcp-${VERSION#v}.dxt
+        \`\`\`
+        " \
+          --tag "$VERSION"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Update documentation links
+  update-docs-links:
+    name: Update Documentation Links
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Checkout wiki
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository }}.wiki
+        path: wiki
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update version links in wiki
+      run: |
+        VERSION="${{ github.event.release.tag_name }}"
+
+        # Update Home.md with latest version
+        sed -i "s|handbrake-mcp-v[0-9]\+\.[0-9]\+\.[0-9]\+|handbrake-mcp-${VERSION#v}|g" wiki/Home.md
+
+        # Update any version references
+        find wiki -name "*.md" -exec sed -i "s|version [0-9]\+\.[0-9]\+\.[0-9]\+|version ${VERSION#v}|g" {} \;
+
+    - name: Commit wiki updates
+      run: |
+        cd wiki
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        if git diff --staged --quiet; then
+          echo "No wiki changes needed"
+        else
+          git commit -m "docs: update version links for ${{ github.event.release.tag_name }} [skip ci]"
+          git push
+        fi
+
+  # Social media and community notifications
+  community-notification:
+    name: Community Notifications
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate social media post
+      run: |
+        VERSION="${{ github.event.release.tag_name }}"
+        REPO_NAME="${{ github.repository }}"
+
+        cat > social_post.md << EOF
+        🚀 **New Release: $REPO_NAME $VERSION**
+
+        Professional video transcoding with MCP integration is now available!
+
+        ✨ **What's New:**
+        - Automated video transcoding using HandBrakeCLI
+        - Batch processing capabilities
+        - Real-time progress tracking
+        - MCP 2.12.0 compliant API
+        - Enhanced testing with real CLI integration
+
+        📦 **Installation:**
+        \`\`\`bash
+        dxt install handbrake-mcp-${VERSION#v}.dxt
+        \`\`\`
+
+        🔗 **Links:**
+        • Download: https://github.com/$REPO_NAME/releases/tag/$VERSION
+        • Documentation: https://sandraschi.github.io/handbrake-mcp/
+        • Issues: https://github.com/$REPO_NAME/issues
+
+        #VideoTranscoding #MCP #HandBrake #Automation #OpenSource
+        EOF
+
+        echo "Generated social media post"
+        cat social_post.md
+
+    - name: Create discussion post
+      run: |
+        VERSION="${{ github.event.release.tag_name }}"
+
+        # Create a discussion about the new release
+        gh discussion create \
+          --repo ${{ github.repository }} \
+          --category "Announcements" \
+          --title "🎉 HandBrake MCP Server $VERSION Released!" \
+          --body "**What's new in $VERSION:**
+
+        - Automated video transcoding using HandBrakeCLI
+        - Batch processing capabilities
+        - Real-time progress tracking
+        - MCP 2.12.0 compliant API
+
+        **Installation:**
+        \`\`\`bash
+        dxt install handbrake-mcp-${VERSION#v}.dxt
+        \`\`\`
+
+        **Feedback Welcome!** 🎯
+
+        We'd love to hear your experience with this release. What features are you most excited about? Any issues or suggestions?
+
+        📚 [Documentation](https://sandraschi.github.io/handbrake-mcp/) | 📦 [Download](https://github.com/${{ github.repository }}/releases/tag/$VERSION)" \
+          || echo "Discussion creation skipped (category may not exist)"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

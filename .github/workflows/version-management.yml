@@ -1,0 +1,269 @@
+name: Version Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      create_release:
+        description: 'Create GitHub release'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.8'
+
+jobs:
+  version-bump:
+    name: Version Bump
+    runs-on: ubuntu-latest
+    if: github.event.inputs.create_release == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging
+
+    - name: Get current version
+      id: current_version
+      run: |
+        import json
+        with open('dxt/manifest.json', 'r') as f:
+            manifest = json.load(f)
+        current_version = manifest['version']
+        print(f"CURRENT_VERSION={current_version}")
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"current_version={current_version}\n")
+      shell: python
+
+    - name: Calculate new version
+      id: new_version
+      run: |
+        import os
+        from packaging import version
+
+        current_version = "${{ steps.current_version.outputs.current_version }}"
+        version_type = "${{ github.event.inputs.version_type }}"
+
+        current = version.parse(current_version)
+        if version_type == "major":
+            new_version = f"{current.major + 1}.0.0"
+        elif version_type == "minor":
+            new_version = f"{current.major}.{current.minor + 1}.0"
+        else:  # patch
+            new_version = f"{current.major}.{current.minor}.{current.micro + 1}"
+
+        print(f"NEW_VERSION={new_version}")
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"new_version={new_version}\n")
+      shell: python
+
+    - name: Update version in manifest
+      run: |
+        import json
+        import os
+
+        manifest_path = 'dxt/manifest.json'
+        new_version = "${{ steps.new_version.outputs.new_version }}"
+
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+
+        manifest['version'] = new_version
+
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+
+        print(f"Updated version to {new_version} in manifest.json")
+      shell: python
+
+    - name: Update version in pyproject.toml
+      run: |
+        import re
+        import os
+
+        pyproject_path = 'pyproject.toml'
+        new_version = "${{ steps.new_version.outputs.new_version }}"
+
+        with open(pyproject_path, 'r') as f:
+            content = f.read()
+
+        # Update version in pyproject.toml
+        updated_content = re.sub(
+            r'version = "[^"]*"',
+            f'version = "{new_version}"',
+            content
+        )
+
+        with open(pyproject_path, 'w') as f:
+            f.write(updated_content)
+
+        print(f"Updated version to {new_version} in pyproject.toml")
+      shell: python
+
+    - name: Update version in __init__.py
+      run: |
+        import re
+        import os
+
+        init_path = 'src/handbrake_mcp/__init__.py'
+        new_version = "${{ steps.new_version.outputs.new_version }}"
+
+        with open(init_path, 'r') as f:
+            content = f.read()
+
+        # Update version in __init__.py
+        updated_content = re.sub(
+            r'__version__ = "[^"]*"',
+            f'__version__ = "{new_version}"',
+            content
+        )
+
+        with open(init_path, 'w') as f:
+            f.write(updated_content)
+
+        print(f"Updated version to {new_version} in __init__.py")
+      shell: python
+
+    - name: Commit and push version changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add dxt/manifest.json pyproject.toml src/handbrake_mcp/__init__.py
+        git commit -m "chore: bump version to ${{ steps.new_version.outputs.new_version }}"
+
+        # Push to main branch
+        git push origin main
+
+        # Create version tag
+        NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+        git tag "v$NEW_VERSION"
+        git push origin "v$NEW_VERSION"
+
+        echo "Version bumped to $NEW_VERSION and tagged"
+      shell: bash
+
+  manual-release:
+    name: Manual Release
+    runs-on: ubuntu-latest
+    needs: version-bump
+    if: github.event.inputs.create_release == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install -r dxt/requirements-dxt.txt
+
+    - name: Install HandBrake CLI
+      run: |
+        sudo apt update
+        sudo apt install -y handbrake-cli
+
+    - name: Set up virtual environment
+      run: |
+        python dxt/setup-venv.py
+
+    - name: Activate virtual environment and build
+      run: |
+        source ./dxt/venv/bin/activate
+        python dxt/test-venv.py
+        python dxt/scripts/build.py
+
+    - name: Get version for release
+      id: get_version
+      run: |
+        import json
+        with open('dxt/manifest.json', 'r') as f:
+            manifest = json.load(f)
+        version = manifest['version']
+        print(f"VERSION={version}")
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"version={version}\n")
+      shell: python
+
+    - name: Create GitHub Release
+      run: |
+        echo "Creating GitHub release v${{ steps.get_version.outputs.version }}..."
+
+        # Create release notes
+        cat > release_notes.md << EOF
+        # HandBrake MCP Server v${{ steps.get_version.outputs.version }}
+
+        ## What's New
+        - Automated video transcoding using HandBrakeCLI
+        - Batch processing capabilities
+        - Watch folder support for automatic processing
+        - Real-time progress tracking
+        - MCP 2.12.0 compliant API
+
+        ## Installation
+
+        ### Option 1: DXT Package (Recommended)
+        \`\`\`bash
+        # Install the DXT package
+        dxt install handbrake-mcp-v${{ steps.get_version.outputs.version }}.dxt
+        \`\`\`
+
+        ### Option 2: Manual Installation
+        \`\`\`bash
+        pip install handbrake-mcp==${{ steps.get_version.outputs.version }}
+        \`\`\`
+
+        ## Requirements
+        - Python 3.8+
+        - HandBrake CLI
+        - See README.md for full installation instructions
+
+        ## Usage
+        See the included documentation and examples for usage instructions.
+
+        ---
+        *This release was created by manual workflow trigger*
+        EOF
+
+        gh release create "v${{ steps.get_version.outputs.version }}" \
+          --title "HandBrake MCP Server v${{ steps.get_version.outputs.version }}" \
+          --notes-file release_notes.md \
+          --latest \
+          "dist/handbrake-mcp-${{ steps.get_version.outputs.version }}.dxt#HandBrake MCP DXT Package"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to PyPI (if configured)
+      if: false  # Disabled until PyPI credentials are configured
+      run: |
+        echo "PyPI upload not configured"
+        # Future: Add PyPI upload with twine
+        # twine upload dist/*

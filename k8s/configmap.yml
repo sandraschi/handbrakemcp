@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: handbrake-config
+  labels:
+    app: handbrake-mcp
+data:
+  config.yaml: |
+    # HandBrake MCP Configuration
+    server:
+      host: "0.0.0.0"
+      port: 8000
+      log_level: "info"
+
+    handbrake:
+      cli_path: "HandBrakeCLI"
+      default_preset: "Fast 1080p30"
+      max_concurrent_jobs: 3
+      hardware_acceleration: true
+
+    watch_folders:
+      - "/app/watch"
+
+    processed_folder: "/app/processed"
+
+    notifications:
+      enabled: true
+      webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+      email_recipients:
+        - "admin@example.com"
+
+    storage:
+      watch_volume_size: "100Gi"
+      processed_volume_size: "500Gi"
+
+    security:
+      allow_origins:
+        - "https://your-domain.com"
+      api_key_required: false

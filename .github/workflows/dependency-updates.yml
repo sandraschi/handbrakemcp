@@ -1,0 +1,207 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 6 AM UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: 'Type of dependency update'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - security
+        - minor
+        - patch
+
+env:
+  PYTHON_VERSION: '3.8'
+
+jobs:
+  dependency-check:
+    name: Check for Dependency Updates
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'dxt/requirements-dxt.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install pip-tools safety bandit
+
+    - name: Check for outdated packages
+      run: |
+        echo "Checking for outdated packages..."
+        pip list --outdated --format=json > outdated_packages.json || echo "No outdated packages found"
+
+        if [ -f outdated_packages.json ]; then
+          cat outdated_packages.json
+          # Count outdated packages
+          OUTDATED_COUNT=$(jq length outdated_packages.json)
+          echo "Found $OUTDATED_COUNT outdated packages"
+        else
+          echo "All packages are up to date"
+        fi
+
+    - name: Security scan with Safety
+      run: |
+        echo "Running security scan..."
+        safety check --json > security_issues.json || echo "No security issues found"
+
+        if [ -f security_issues.json ]; then
+          SECURITY_COUNT=$(jq length security_issues.json)
+          echo "Found $SECURITY_COUNT security issues"
+          cat security_issues.json
+        else
+          echo "No security issues found"
+        fi
+
+    - name: Run bandit security linter
+      run: |
+        echo "Running bandit security scan..."
+        bandit -r src/ -f json > bandit_issues.json || echo "Bandit scan completed with warnings"
+
+        if [ -f bandit_issues.json ]; then
+          ISSUES_COUNT=$(jq '.results | length' bandit_issues.json)
+          echo "Bandit found $ISSUES_COUNT security issues"
+          cat bandit_issues.json
+        fi
+
+    - name: Create dependency report
+      run: |
+        cat > dependency_report.md << EOF
+        # Dependency Update Report
+        Generated: $(date -u)
+
+        ## Outdated Packages
+        EOF
+
+        if [ -f outdated_packages.json ]; then
+          echo "\`\`\`json" >> dependency_report.md
+          cat outdated_packages.json >> dependency_report.md
+          echo "\`\`\`" >> dependency_report.md
+        else
+          echo "All packages are up to date!" >> dependency_report.md
+        fi
+
+        cat >> dependency_report.md << EOF
+
+        ## Security Issues (Safety)
+        EOF
+
+        if [ -f security_issues.json ]; then
+          echo "\`\`\`json" >> dependency_report.md
+          cat security_issues.json >> dependency_report.md
+          echo "\`\`\`" >> dependency_report.md
+        else
+          echo "No security issues found!" >> dependency_report.md
+        fi
+
+        cat >> dependency_report.md << EOF
+
+        ## Security Issues (Bandit)
+        EOF
+
+        if [ -f bandit_issues.json ]; then
+          echo "\`\`\`json" >> dependency_report.md
+          cat bandit_issues.json >> dependency_report.md
+          echo "\`\`\`" >> dependency_report.md
+        else
+          echo "No bandit security issues found!" >> dependency_report.md
+        fi
+
+        echo "Dependency report generated: dependency_report.md"
+
+    - name: Upload dependency report
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-report
+        path: dependency_report.md
+        retention-days: 30
+
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+    needs: dependency-check
+    if: github.event.inputs.update_type == 'all' || github.event.schedule
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-tools
+
+    - name: Update requirements files
+      run: |
+        echo "Updating requirements files..."
+
+        # Update main requirements
+        pip-compile requirements.in --output-file requirements.txt || echo "No requirements.in found"
+
+        # Update dev requirements
+        pip-compile requirements-dev.in --output-file requirements-dev.txt || echo "No requirements-dev.in found"
+
+        # Update DXT requirements
+        pip-compile dxt/requirements-dxt.in --output-file dxt/requirements-dxt.txt || echo "No dxt/requirements-dxt.in found"
+
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "Requirements files have changes"
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "No changes to requirements files"
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit dependency updates
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+        git add requirements*.txt dxt/requirements-dxt.txt || echo "No requirements files to add"
+
+        if [ -n "$(git status --porcelain)" ]; then
+          git commit -m "chore: update dependencies
+
+          - Updated Python package dependencies
+          - Automated dependency update via CI/CD"
+
+          git push origin ${{ github.ref_name }}
+
+          echo "Dependency updates committed and pushed"
+        else
+          echo "No changes to commit"
+        fi

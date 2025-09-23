@@ -1,0 +1,245 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'mkdocs.yml'
+
+env:
+  PYTHON_VERSION: '3.8'
+
+jobs:
+  # Build and deploy documentation to GitHub Pages
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install mkdocs mkdocs-material mkdocs-macros-plugin mike
+
+    - name: Setup documentation directory
+      run: |
+        mkdir -p docs
+        # Copy README to docs index if it doesn't exist
+        if [ ! -f docs/index.md ]; then
+          cp README.md docs/index.md
+        fi
+
+    - name: Build documentation
+      run: |
+        echo "Building documentation..."
+        mkdocs build --clean
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site
+        cname: handbrake-mcp.sandraschi.dev
+
+  # Update GitHub Wiki
+  wiki:
+    name: Update Wiki
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Checkout wiki
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository }}.wiki
+        path: wiki
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Update wiki content
+      run: |
+        # Copy documentation to wiki
+        cp docs/*.md wiki/ 2>/dev/null || true
+        cp README.md wiki/Home.md
+
+        # Generate API documentation
+        python -c "
+        import os
+        from pathlib import Path
+
+        wiki_dir = Path('wiki')
+        docs_dir = Path('docs')
+
+        # Generate API reference
+        api_content = '''# API Reference
+
+        ## MCP Tools
+
+        The HandBrake MCP Server provides the following MCP tools:
+
+        ### Video Processing
+        - `transcode_video` - Single video file transcoding
+        - `batch_transcode` - Multiple file batch processing
+        - `get_job_status` - Monitor transcoding progress
+        - `cancel_job` - Stop running transcoding jobs
+
+        ### Configuration & Discovery
+        - `get_presets` - List available HandBrake presets
+        - `get_loaded_models` - MCP compatibility endpoint
+        - `get_provider_status` - System health information
+
+        ## Installation
+
+        ### DXT Package (Recommended)
+        \`\`\`bash
+        dxt install handbrake-mcp.dxt
+        \`\`\`
+
+        ### Manual Installation
+        \`\`\`bash
+        pip install handbrake-mcp
+        \`\`\`
+
+        ## Configuration
+
+        The server supports configuration via environment variables:
+
+        - `HBB_PATH` - Path to HandBrakeCLI executable
+        - `DEFAULT_PRESET` - Default transcoding preset
+        - `LOG_LEVEL` - Logging verbosity
+        - `HOST` / `PORT` - Server binding
+        - `MAX_CONCURRENT_JOBS` - Job concurrency limit
+        - `VIDEO_QUALITY` - Output quality setting
+        '''
+
+        with open(wiki_dir / 'API-Reference.md', 'w') as f:
+            f.write(api_content)
+
+        # Generate troubleshooting guide
+        troubleshooting_content = '''# Troubleshooting
+
+        ## Common Issues
+
+        ### HandBrakeCLI Not Found
+        **Error:** `HandBrakeCLI not found`
+        **Solution:**
+        1. Install HandBrake CLI for your platform
+        2. Set `HBB_PATH` environment variable
+        3. Ensure executable is in PATH
+
+        ### Permission Errors
+        **Error:** `Permission denied`
+        **Solution:**
+        - Check file permissions on input/output directories
+        - Ensure user has read/write access
+
+        ### Memory Issues
+        **Error:** `Out of memory`
+        **Solution:**
+        - Reduce `MAX_CONCURRENT_JOBS`
+        - Process files individually
+        - Increase system RAM
+
+        ### Codec Errors
+        **Error:** `Unsupported codec`
+        **Solution:**
+        - Verify input file format
+        - Check HandBrakeCLI version
+        - Use different preset
+
+        ## Debug Mode
+
+        Enable debug logging:
+        \`\`\`bash
+        export LOG_LEVEL=debug
+        \`\`\`
+
+        ## Getting Help
+
+        - 📚 [Documentation](https://sandraschi.github.io/handbrake-mcp/)
+        - 🐛 [Issues](https://github.com/sandraschi/handbrake-mcp/issues)
+        - 💬 [Discussions](https://github.com/sandraschi/handbrake-mcp/discussions)
+        '''
+
+        with open(wiki_dir / 'Troubleshooting.md', 'w') as f:
+            f.write(troubleshooting_content)
+        "
+
+    - name: Generate version info
+      run: |
+        VERSION=$(python -c "import json; print(json.load(open('dxt/manifest.json'))['version'])")
+        echo "# Version $VERSION" > wiki/_Footer.md
+        echo "" >> wiki/_Footer.md
+        echo "*Last updated: $(date)*" >> wiki/_Footer.md
+
+    - name: Commit and push wiki updates
+      run: |
+        cd wiki
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        if git diff --staged --quiet; then
+          echo "No changes to wiki"
+        else
+          git commit -m "docs: update wiki [skip ci]"
+          git push
+        fi
+
+  # Validate documentation
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mkdocs mkdocs-material
+
+    - name: Validate MkDocs configuration
+      run: |
+        mkdocs build --strict --dry-run || (echo "MkDocs validation failed"; exit 1)
+
