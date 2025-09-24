@@ -72,85 +72,8 @@ def get_python_site_packages():
     return None
 
 def copy_dependencies(temp_dir: Path):
-    """Copy Python dependencies to the package."""
-    print("Collecting Python dependencies...")
-
-    # Create site-packages directory in the package
-    site_packages_dir = temp_dir / "site-packages"
-    site_packages_dir.mkdir(exist_ok=True, parents=True)
-
-    # Get current Python's site-packages
-    current_site_packages = get_python_site_packages()
-    if not current_site_packages:
-        print("Warning: Could not locate site-packages directory")
-        return
-
-    print(f"Copying dependencies from: {current_site_packages}")
-
-    # Get list of installed packages from requirements
-    try:
-        import pkg_resources
-        installed_packages = [d.project_name for d in pkg_resources.working_set]
-    except:
-        print("Warning: Could not get installed packages list")
-        installed_packages = []
-
-    # Dependencies to include - both from manifest and commonly needed
-    target_dependencies = [
-        "fastmcp", "fastapi", "uvicorn", "pydantic", "python-dotenv",
-        "watchdog", "httpx", "psutil", "typing_extensions", "anyio",
-        "starlette", "click", "h11", "sniffio", "idna", "certifi"
-    ]
-
-    copied_packages = set()
-
-    # Copy target dependencies
-    for dep in target_dependencies:
-        try:
-            # Try to find the package in site-packages
-            for item in current_site_packages.glob(f"{dep}*"):
-                if item.is_dir() and item.name not in copied_packages:
-                    # Copy the entire package directory
-                    target_dir = site_packages_dir / item.name
-                    if target_dir.exists():
-                        shutil.rmtree(target_dir)
-                    shutil.copytree(item, target_dir)
-                    copied_packages.add(item.name)
-                    print(f"  Copied: {item.name}")
-                elif item.is_file() and item.suffix in ['.py', '.pyc', '.so', '.dll', '.dylib']:
-                    # Copy individual files
-                    shutil.copy2(item, site_packages_dir)
-                    print(f"  Copied: {item.name}")
-        except Exception as e:
-            print(f"  Warning: Could not copy {dep}: {e}")
-
-    # Also copy any .dist-info directories for the dependencies
-    for dist_info in current_site_packages.glob("*-*.dist-info"):
-        try:
-            target_dir = site_packages_dir / dist_info.name
-            if target_dir.exists():
-                shutil.rmtree(target_dir)
-            shutil.copytree(dist_info, target_dir)
-            print(f"  Copied metadata: {dist_info.name}")
-        except Exception as e:
-            print(f"  Warning: Could not copy metadata {dist_info.name}: {e}")
-
-    # Copy additional essential packages that might be needed
-    essential_dirs = ["pip", "setuptools", "wheel", "pkg_resources"]
-    for essential in essential_dirs:
-        try:
-            for item in current_site_packages.glob(f"{essential}*"):
-                if item.is_dir() and item.name not in copied_packages:
-                    target_dir = site_packages_dir / item.name
-                    if target_dir.exists():
-                        shutil.rmtree(target_dir)
-                    shutil.copytree(item, target_dir)
-                    copied_packages.add(item.name)
-                    print(f"  Copied essential: {item.name}")
-        except Exception as e:
-            print(f"  Warning: Could not copy essential {essential}: {e}")
-
-    print(f"Total packages copied: {len(copied_packages)}")
+    """Skip copying dependencies - Claude Desktop installs them from requirements.txt."""
+    print("Skipping dependency copying - Claude Desktop handles this automatically from requirements.txt")
 
 def copy_required_files(temp_dir: Path, root_dir: Path, version: str):
     """Copy required files to the temporary directory."""

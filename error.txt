@@ -1,0 +1,51 @@
+D:\Dev\repos\handbrakemcp\src\handbrake_mcp\main.py:69: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+C:\Users\sandr\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\applications.py:4495: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  return self.router.on_event(event_type)
+D:\Dev\repos\handbrakemcp\src\handbrake_mcp\main.py:88: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+2025-09-23 22:36:42,926 - handbrake_mcp.stdio_main - INFO - Starting HandBrake MCP server (stdio mode)...
+2025-09-23 22:36:42,926 - handbrake_mcp.stdio_main - INFO - HandBrake MCP server started successfully
+
+
++----------------------------------------------------------------------------+
+|                                                                            |
+|        _ __ ___  _____           __  __  _____________    ____    ____     |
+|       _ __ ___ .'____/___ ______/ /_/  |/  / ____/ __ \  |___ \  / __ \    |
+|      _ __ ___ / /_  / __ `/ ___/ __/ /|_/ / /   / /_/ /  ___/ / / / / /    |
+|     _ __ ___ / __/ / /_/ (__  ) /_/ /  / / /___/ ____/  /  __/_/ /_/ /     |
+|    _ __ ___ /_/    \____/____/\__/_/  /_/\____/_/      /_____(*)____/      |
+|                                                                            |
+|                                                                            |
+|                                FastMCP  2.0                                |
+|                                                                            |
+|                                                                            |
+|                 \U0001f5a5\ufe0f  Server name:     handbrake-mcp                          |
+|                 \U0001f4e6 Transport:       STDIO                                  |
+|                                                                            |
+|                 \U0001f3ce\ufe0f  FastMCP version: 2.12.3                                 |
+|                 \U0001f91d MCP SDK version: 1.14.1                                 |
+|                                                                            |
+|                 \U0001f4da Docs:            https://gofastmcp.com                  |
+|                 \U0001f680 Deploy:          https://fastmcp.cloud                  |
+|                                                                            |
++----------------------------------------------------------------------------+
+
+
+[09/23/25 22:36:42] INFO     Starting MCP server 'handbrake-mcp' server.py:1495
+                             with transport 'stdio'                            

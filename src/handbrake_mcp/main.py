@@ -133,26 +133,7 @@ async def health_check() -> dict:
 
 # For DXT compatibility and dual mode support
 if __name__ == "__main__":
-    if settings.mcp_transport.lower() == "stdio":
-        # Run in stdio mode for MCP clients
-        # Import and run the stdio server
-        from handbrake_mcp.stdio_main import main
-        try:
-            # Check if an event loop is already running
-            loop = asyncio.get_running_loop()
-            # If we're here, schedule the main function in the existing loop
-            loop.create_task(main())
-        except RuntimeError:
-            # No event loop running, so we can call main() for testing
-            asyncio.run(main())
-    else:
-        # Run in FastAPI mode for testing
-        import uvicorn
-
-        uvicorn.run(
-            "handbrake_mcp.main:app",
-            host=settings.mcp_host,
-            port=settings.mcp_port,
-            reload=True,
-            log_level=settings.log_level.lower(),
-        )
+    # When run as a module (python -m handbrake_mcp.main), always run in stdio mode for MCP clients
+    # Claude Desktop expects stdio mode, not FastAPI HTTP mode
+    from handbrake_mcp.stdio_main import main
+    main()

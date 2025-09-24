@@ -33,19 +33,19 @@ class ToolDocumentation:
     def get_multiline_description(self) -> str:
         """Get the full multiline description."""
         lines = []
-        lines.append(f"🎯 {self.name.upper()}")
+        lines.append(f"[TOOL] {self.name.upper()}")
         lines.append("")
         lines.append(self.description)
         lines.append("")
 
         if self.summary:
-            lines.append(f"📋 SUMMARY: {self.summary}")
+            lines.append(f"SUMMARY: {self.summary}")
             lines.append("")
 
         if self.parameters:
-            lines.append("📝 PARAMETERS:")
+            lines.append("PARAMETERS:")
             for param_name, param_info in self.parameters.items():
-                lines.append(f"  • {param_name}: {param_info.get('description', 'No description')}")
+                lines.append(f"  - {param_name}: {param_info.get('description', 'No description')}")
                 if 'type' in param_info:
                     lines.append(f"    Type: {param_info['type']}")
                 if 'default' in param_info:
@@ -56,7 +56,7 @@ class ToolDocumentation:
             lines.append("")
 
         if self.examples:
-            lines.append("💡 EXAMPLES:")
+            lines.append("EXAMPLES:")
             for i, example in enumerate(self.examples, 1):
                 lines.append(f"  {i}. {example.get('description', 'Example')}")
                 if 'code' in example:
@@ -65,31 +65,31 @@ class ToolDocumentation:
             lines.append("")
 
         if self.returns:
-            lines.append("🔄 RETURNS:")
+            lines.append("RETURNS:")
             lines.append(f"  {self.returns.get('description', 'No return description')}")
             if 'type' in self.returns:
                 lines.append(f"  Type: {self.returns['type']}")
             lines.append("")
 
         if self.notes:
-            lines.append("📌 NOTES:")
+            lines.append("NOTES:")
             for note in self.notes:
-                lines.append(f"  • {note}")
+                lines.append(f"  - {note}")
             lines.append("")
 
         if self.warnings:
-            lines.append("⚠️  WARNINGS:")
+            lines.append("WARNINGS:")
             for warning in self.warnings:
-                lines.append(f"  • {warning}")
+                lines.append(f"  - {warning}")
             lines.append("")
 
         if self.related_tools:
-            lines.append("🔗 RELATED TOOLS:")
+            lines.append("RELATED TOOLS:")
             for tool in self.related_tools:
-                lines.append(f"  • {tool}")
+                lines.append(f"  - {tool}")
             lines.append("")
 
-        lines.append(f"📦 Version: {self.version}")
+        lines.append(f"Version: {self.version}")
         return "\n".join(lines)
 
     def get_basic_description(self) -> str:
@@ -185,9 +185,9 @@ def get_tool_help(tool_name: str, level: str = "basic") -> str:
     doc = docs[tool_name]
 
     if level == "basic":
-        return f"📋 {doc.name}: {doc.get_basic_description()}"
+        return f"[TOOL] {doc.name}: {doc.get_basic_description()}"
     elif level == "detailed":
-        return f"🔍 {doc.name.upper()}\n\n{doc.get_detailed_description()}\n\n📝 Parameters: {len(doc.parameters)} | 💡 Examples: {len(doc.examples)}"
+        return f"[DETAIL] {doc.name.upper()}\n\n{doc.get_detailed_description()}\n\nPARAMETERS: {len(doc.parameters)} | EXAMPLES: {len(doc.examples)}"
     elif level == "full":
         return doc.get_multiline_description()
     else:
@@ -197,37 +197,37 @@ def get_tool_help(tool_name: str, level: str = "basic") -> str:
 def get_system_status() -> str:
     """Get comprehensive system status."""
     lines = []
-    lines.append("🖥️  HANDBRAKE MCP SERVER STATUS")
+    lines.append("  HANDBRAKE MCP SERVER STATUS")
     lines.append("=" * 50)
 
     # Server information
-    lines.append("\n📊 SERVER INFO:")
-    lines.append("  • Status: 🟢 Running")
-    lines.append(f"  • Version: {settings.__version__ if hasattr(settings, '__version__') else 'Unknown'}")
-    lines.append(f"  • Python: {__import__('sys').version}")
-    lines.append(f"  • Platform: {__import__('platform').platform()}")
+    lines.append("\n[INFO] SERVER INFO:")
+    lines.append("  - Status: [RUNNING] Running")
+    lines.append(f"  - Version: {settings.__version__ if hasattr(settings, '__version__') else 'Unknown'}")
+    lines.append(f"  - Python: {__import__('sys').version}")
+    lines.append(f"  - Platform: {__import__('platform').platform()}")
     lines.append("")
 
     # Tool information
     docs = get_all_tool_documentation()
-    lines.append(f"🛠️  TOOLS: {len(docs)} registered")
+    lines.append(f"[TOOLS]  TOOLS: {len(docs)} registered")
     for tool_name, doc in docs.items():
-        lines.append(f"  • {tool_name}: {doc.get_basic_description()}")
+        lines.append(f"  - {tool_name}: {doc.get_basic_description()}")
     lines.append("")
 
     # Configuration
-    lines.append("⚙️  CONFIGURATION:")
-    lines.append(f"  • Default Preset: {settings.default_preset}")
-    lines.append(f"  • Log Level: {settings.log_level}")
-    lines.append(f"  • Max Concurrent Jobs: {getattr(settings, 'max_concurrent_jobs', 'Unknown')}")
+    lines.append("[CONFIG]  CONFIGURATION:")
+    lines.append(f"  - Default Preset: {settings.default_preset}")
+    lines.append(f"  - Log Level: {settings.log_level}")
+    lines.append(f"  - Max Concurrent Jobs: {getattr(settings, 'max_concurrent_jobs', 'Unknown')}")
     lines.append("")
 
     # Resources
     lines.append("💾 RESOURCES:")
     import psutil
-    lines.append(f"  • CPU Usage: {psutil.cpu_percent()}%")
-    lines.append(f"  • Memory Usage: {psutil.virtual_memory().percent}%")
-    lines.append(f"  • Disk Usage: {psutil.disk_usage('/').percent}%")
+    lines.append(f"  - CPU Usage: {psutil.cpu_percent()}%")
+    lines.append(f"  - Memory Usage: {psutil.virtual_memory().percent}%")
+    lines.append(f"  - Disk Usage: {psutil.disk_usage('/').percent}%")
     lines.append("")
 
     return "\n".join(lines)
@@ -283,22 +283,22 @@ def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -
     docs = get_all_tool_documentation()
 
     if level == "basic":
-        lines = ["🛠️  HANDBRAKE MCP TOOLS - BASIC HELP"]
+        lines = ["[TOOLS]  HANDBRAKE MCP TOOLS - BASIC HELP"]
         lines.append("=" * 50)
 
-        lines.append(f"\n📊 OVERVIEW: {len(docs)} tools available")
+        lines.append(f"\n[INFO] OVERVIEW: {len(docs)} tools available")
         lines.append("")
 
-        lines.append("🎯 AVAILABLE TOOLS:")
+        lines.append("[TOOLS] AVAILABLE TOOLS:")
         for tool_name, doc in docs.items():
-            lines.append(f"  • {tool_name}: {doc.get_basic_description()}")
+            lines.append(f"  - {tool_name}: {doc.get_basic_description()}")
 
         lines.append("")
-        lines.append("💡 QUICK COMMANDS:")
-        lines.append("  • help - Get comprehensive help for tools")
-        lines.append("  • system_status - Get comprehensive system status")
-        lines.append("  • get_presets - List all available HandBrake presets")
-        lines.append("  • transcode_video - Transcode a single video file")
+        lines.append("[TIP] QUICK COMMANDS:")
+        lines.append("  - help - Get comprehensive help for tools")
+        lines.append("  - system_status - Get comprehensive system status")
+        lines.append("  - get_presets - List all available HandBrake presets")
+        lines.append("  - transcode_video - Transcode a single video file")
         lines.append("")
         lines.append("🔍 For detailed help on any tool, use: help('tool_name', 'detailed')")
 
@@ -316,12 +316,12 @@ def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -
             lines.append(f"\n📂 {category.upper()}:")
             for tool_name in tools:
                 doc = docs[tool_name]
-                lines.append(f"  • {tool_name}: {doc.get_detailed_description()}")
+                lines.append(f"  - {tool_name}: {doc.get_detailed_description()}")
                 lines.append(f"    Parameters: {len(doc.parameters)} | Examples: {len(doc.examples)}")
 
         lines.append("")
-        lines.append("📚 LEGEND:")
-        lines.append("  🟢 Ready for use")
+        lines.append("[DOCS] LEGEND:")
+        lines.append("  [RUNNING] Ready for use")
         lines.append("  🟡 Requires configuration")
         lines.append("  🔴 May require additional setup")
 
@@ -334,7 +334,7 @@ def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -
                 return f"❌ Tool '{filter_by}' not found. Use 'help' to see available tools."
         else:
             # Show full help for all tools
-            lines = ["📚 HANDBRAKE MCP TOOLS - COMPLETE DOCUMENTATION"]
+            lines = ["[DOCS] HANDBRAKE MCP TOOLS - COMPLETE DOCUMENTATION"]
             lines.append("=" * 60)
 
             for i, (tool_name, doc) in enumerate(docs.items(), 1):
@@ -348,14 +348,14 @@ def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -
 
         categories = get_tool_categories()
 
-        lines.append(f"\n📊 CATEGORY OVERVIEW: {len(categories)} categories")
+        lines.append(f"\n[INFO] CATEGORY OVERVIEW: {len(categories)} categories")
         lines.append("")
 
         for category, tools in categories.items():
             lines.append(f"📁 {category.upper()} ({len(tools)} tools):")
             for tool_name in tools:
                 doc = docs[tool_name]
-                lines.append(f"  • {tool_name}: {doc.get_basic_description()}")
+                lines.append(f"  - {tool_name}: {doc.get_basic_description()}")
             lines.append("")
 
     else:
@@ -378,13 +378,13 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
     docs = get_all_tool_documentation()
 
     if help_type == "overview":
-        lines = ["🚀 HANDBRAKE MCP - ADVANCED OVERVIEW"]
+        lines = ["[ADVANCED] HANDBRAKE MCP - ADVANCED OVERVIEW"]
         lines.append("=" * 50)
 
-        lines.append(f"\n📊 SYSTEM CAPABILITIES: {len(docs)} specialized tools")
+        lines.append(f"\n[INFO] SYSTEM CAPABILITIES: {len(docs)} specialized tools")
         lines.append("")
 
-        lines.append("🎯 CORE WORKFLOW:")
+        lines.append("[TOOLS] CORE WORKFLOW:")
         lines.append("  1. transcode_video - Single file processing")
         lines.append("  2. batch_transcode - Multiple file processing")
         lines.append("  3. get_job_status - Progress monitoring")
@@ -392,19 +392,19 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
         lines.append("  5. get_presets - Configuration discovery")
         lines.append("")
 
-        lines.append("🔧 ADVANCED FEATURES:")
-        lines.append("  • Real-time progress tracking")
-        lines.append("  • Hardware acceleration support")
-        lines.append("  • Batch processing optimization")
-        lines.append("  • Error handling and recovery")
-        lines.append("  • Resource management")
+        lines.append("[TROUBLESHOOT] ADVANCED FEATURES:")
+        lines.append("  - Real-time progress tracking")
+        lines.append("  - Hardware acceleration support")
+        lines.append("  - Batch processing optimization")
+        lines.append("  - Error handling and recovery")
+        lines.append("  - Resource management")
         lines.append("")
 
     elif help_type == "examples":
-        lines = ["💡 HANDBRAKE MCP - USAGE EXAMPLES"]
+        lines = ["[TIP] HANDBRAKE MCP - USAGE EXAMPLES"]
         lines.append("=" * 50)
 
-        lines.append("\n📝 BASIC USAGE:")
+        lines.append("\n[USAGE] BASIC USAGE:")
         lines.append("  # Single video transcoding")
         lines.append("  transcode_video('/input.mp4', '/output.mkv')")
         lines.append("")
@@ -417,7 +417,7 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
         lines.append("  transcode_video('/input.mp4', '/output.mp4', preset='HQ 1080p30')")
         lines.append("")
 
-        lines.append("📊 MONITORING:")
+        lines.append("[INFO] MONITORING:")
         lines.append("  # Check job status")
         lines.append("  get_job_status('job_12345')")
         lines.append("")
@@ -426,7 +426,7 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
         lines.append("  get_provider_status()")
         lines.append("")
 
-        lines.append("⚙️  CONFIGURATION:")
+        lines.append("[CONFIG]  CONFIGURATION:")
         lines.append("  # Discover available presets")
         lines.append("  presets = get_presets()")
         lines.append("")
@@ -436,35 +436,35 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
         lines.append("  print(f'Available presets: {len(status[\"supported_presets\"])}')")
 
     elif help_type == "troubleshooting":
-        lines = ["🔧 HANDBRAKE MCP - TROUBLESHOOTING GUIDE"]
+        lines = ["[TROUBLESHOOT] HANDBRAKE MCP - TROUBLESHOOTING GUIDE"]
         lines.append("=" * 50)
 
         lines.append("\n❌ COMMON ISSUES:")
         lines.append("")
 
         lines.append("🔍 'HandBrake CLI not found':")
-        lines.append("  • Install HandBrake CLI or set HBB_PATH")
-        lines.append("  • Verify installation with 'HandBrakeCLI --version'")
-        lines.append("  • Check system PATH environment variable")
+        lines.append("  - Install HandBrake CLI or set HBB_PATH")
+        lines.append("  - Verify installation with 'HandBrakeCLI --version'")
+        lines.append("  - Check system PATH environment variable")
         lines.append("")
 
         lines.append("📁 'File not found':")
-        lines.append("  • Verify input file path exists")
-        lines.append("  • Check file permissions")
-        lines.append("  • Use absolute paths when possible")
+        lines.append("  - Verify input file path exists")
+        lines.append("  - Check file permissions")
+        lines.append("  - Use absolute paths when possible")
         lines.append("")
 
-        lines.append("⚙️  'Invalid preset':")
-        lines.append("  • Use get_presets() to see available options")
-        lines.append("  • Check HandBrake CLI version compatibility")
-        lines.append("  • Verify preset name spelling")
+        lines.append("[CONFIG]  'Invalid preset':")
+        lines.append("  - Use get_presets() to see available options")
+        lines.append("  - Check HandBrake CLI version compatibility")
+        lines.append("  - Verify preset name spelling")
         lines.append("")
 
         lines.append("🛑 'Job failed':")
-        lines.append("  • Check error message in job status")
-        lines.append("  • Verify output directory exists and is writable")
-        lines.append("  • Check available disk space")
-        lines.append("  • Review system resource usage")
+        lines.append("  - Check error message in job status")
+        lines.append("  - Verify output directory exists and is writable")
+        lines.append("  - Check available disk space")
+        lines.append("  - Review system resource usage")
         lines.append("")
 
         lines.append("🔍 DIAGNOSTIC STEPS:")
@@ -475,37 +475,37 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
         lines.append("  5. Test with simple files first")
 
     elif help_type == "performance":
-        lines = ["⚡ HANDBRAKE MCP - PERFORMANCE OPTIMIZATION"]
+        lines = ["[PERFORMANCE] HANDBRAKE MCP - PERFORMANCE OPTIMIZATION"]
         lines.append("=" * 50)
 
-        lines.append("\n🎯 OPTIMIZATION STRATEGIES:")
+        lines.append("\n[TOOLS] OPTIMIZATION STRATEGIES:")
         lines.append("")
 
         lines.append("💾 RESOURCE MANAGEMENT:")
-        lines.append("  • Use appropriate presets for your use case")
-        lines.append("  • Monitor system resources during processing")
-        lines.append("  • Adjust max_concurrent_jobs based on system capacity")
-        lines.append("  • Use hardware acceleration when available")
+        lines.append("  - Use appropriate presets for your use case")
+        lines.append("  - Monitor system resources during processing")
+        lines.append("  - Adjust max_concurrent_jobs based on system capacity")
+        lines.append("  - Use hardware acceleration when available")
         lines.append("")
 
-        lines.append("📦 BATCH PROCESSING:")
-        lines.append("  • Process similar files together for efficiency")
-        lines.append("  • Use consistent presets within batches")
-        lines.append("  • Monitor memory usage with large batches")
-        lines.append("  • Consider disk I/O limitations")
+        lines.append("[BATCH] BATCH PROCESSING:")
+        lines.append("  - Process similar files together for efficiency")
+        lines.append("  - Use consistent presets within batches")
+        lines.append("  - Monitor memory usage with large batches")
+        lines.append("  - Consider disk I/O limitations")
         lines.append("")
 
-        lines.append("🔧 SYSTEM TUNING:")
-        lines.append("  • Ensure adequate RAM for video processing")
-        lines.append("  • Use SSD storage for temporary files")
-        lines.append("  • Monitor CPU and GPU utilization")
-        lines.append("  • Consider network storage limitations")
+        lines.append("[TROUBLESHOOT] SYSTEM TUNING:")
+        lines.append("  - Ensure adequate RAM for video processing")
+        lines.append("  - Use SSD storage for temporary files")
+        lines.append("  - Monitor CPU and GPU utilization")
+        lines.append("  - Consider network storage limitations")
         lines.append("")
 
-        lines.append("📊 MONITORING TOOLS:")
-        lines.append("  • get_provider_status() - System health")
-        lines.append("  • get_job_status() - Individual job progress")
-        lines.append("  • Use detailed help for tool-specific guidance")
+        lines.append("[INFO] MONITORING TOOLS:")
+        lines.append("  - get_provider_status() - System health")
+        lines.append("  - get_job_status() - Individual job progress")
+        lines.append("  - Use detailed help for tool-specific guidance")
 
     else:
         return f"❌ Invalid help type '{help_type}'. Available types: overview, examples, troubleshooting, performance"
@@ -516,51 +516,51 @@ def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overvie
 def get_system_status() -> str:
     """Get comprehensive system status."""
     lines = []
-    lines.append("🖥️  HANDBRAKE MCP SERVER STATUS")
+    lines.append("  HANDBRAKE MCP SERVER STATUS")
     lines.append("=" * 50)
 
     # Server information
-    lines.append("\n📊 SERVER INFO:")
-    lines.append("  • Status: 🟢 Running")
-    lines.append(f"  • Version: {__import__('sys').version}")
-    lines.append(f"  • Platform: {__import__('platform').platform()}")
+    lines.append("\n[INFO] SERVER INFO:")
+    lines.append("  - Status: [RUNNING] Running")
+    lines.append(f"  - Version: {__import__('sys').version}")
+    lines.append(f"  - Platform: {__import__('platform').platform()}")
     lines.append("")
 
     # Tool information
     docs = get_all_tool_documentation()
-    lines.append(f"🛠️  TOOLS: {len(docs)} registered")
+    lines.append(f"[TOOLS]  TOOLS: {len(docs)} registered")
     for tool_name, doc in docs.items():
-        lines.append(f"  • {tool_name}: {doc.get_basic_description()}")
+        lines.append(f"  - {tool_name}: {doc.get_basic_description()}")
     lines.append("")
 
     # Categories
     categories = get_tool_categories()
     lines.append(f"📂 CATEGORIES: {len(categories)}")
     for category, tools in categories.items():
-        lines.append(f"  • {category}: {len(tools)} tools")
+        lines.append(f"  - {category}: {len(tools)} tools")
     lines.append("")
 
     # Configuration
-    lines.append("⚙️  CONFIGURATION:")
-    lines.append(f"  • Default Preset: {settings.default_preset}")
-    lines.append(f"  • Log Level: {settings.log_level}")
-    lines.append(f"  • Max Concurrent Jobs: {getattr(settings, 'max_concurrent_jobs', 'Unknown')}")
+    lines.append("[CONFIG]  CONFIGURATION:")
+    lines.append(f"  - Default Preset: {settings.default_preset}")
+    lines.append(f"  - Log Level: {settings.log_level}")
+    lines.append(f"  - Max Concurrent Jobs: {getattr(settings, 'max_concurrent_jobs', 'Unknown')}")
     lines.append("")
 
     # Resources
     lines.append("💾 RESOURCES:")
     import psutil
-    lines.append(f"  • CPU Usage: {psutil.cpu_percent()}%")
-    lines.append(f"  • Memory Usage: {psutil.virtual_memory().percent}%")
-    lines.append(f"  • Disk Usage: {psutil.disk_usage('/').percent}%")
+    lines.append(f"  - CPU Usage: {psutil.cpu_percent()}%")
+    lines.append(f"  - Memory Usage: {psutil.virtual_memory().percent}%")
+    lines.append(f"  - Disk Usage: {psutil.disk_usage('/').percent}%")
     lines.append("")
 
     # Quick help
-    lines.append("💡 QUICK HELP:")
-    lines.append("  • help - Get tool-specific help")
-    lines.append("  • get_multilevel_help('detailed') - Detailed help")
-    lines.append("  • get_advanced_help('examples') - Usage examples")
-    lines.append("  • get_provider_status() - System status")
+    lines.append("[TIP] QUICK HELP:")
+    lines.append("  - help - Get tool-specific help")
+    lines.append("  - get_multilevel_help('detailed') - Detailed help")
+    lines.append("  - get_advanced_help('examples') - Usage examples")
+    lines.append("  - get_provider_status() - System status")
 
     return "\n".join(lines)
 
@@ -659,8 +659,7 @@ def register_tools_with_mcp(mcp_instance):
     # Store documentation registry
     get_all_tool_documentation._docs = docs_registry
 
-    print(f"✅ Registered {len(tools)} tools with comprehensive documentation")
-    print(f"✅ Registered {len(docs_registry)} documented tools in registry")
+    # Tools registered successfully - MCP protocol handles this silently
 
 
 class TranscodeRequest(BaseModel):
@@ -780,11 +779,11 @@ class JobStatusResponse(BaseModel):
     real-time progress tracking for long-running encoding jobs.
 
     Key features:
-    • Automatic format detection and optimization
-    • Hardware acceleration support (NVENC, QSV, AMF, VideoToolbox)
-    • Real-time progress monitoring
-    • Quality-based encoding with customizable settings
-    • Support for all common video formats
+    - Automatic format detection and optimization
+    - Hardware acceleration support (NVENC, QSV, AMF, VideoToolbox)
+    - Real-time progress monitoring
+    - Quality-based encoding with customizable settings
+    - Support for all common video formats
     """,
     summary="Transcode a single video file using HandBrake with professional quality settings",
     parameters={
@@ -885,12 +884,12 @@ async def transcode_video(
     on available system resources and configured limits.
 
     Advanced features:
-    • Parallel processing with configurable concurrency limits
-    • Individual job progress tracking and error handling
-    • Mixed preset support within a single batch
-    • Automatic retry logic for failed jobs
-    • Resource usage optimization
-    • Real-time batch progress reporting
+    - Parallel processing with configurable concurrency limits
+    - Individual job progress tracking and error handling
+    - Mixed preset support within a single batch
+    - Automatic retry logic for failed jobs
+    - Resource usage optimization
+    - Real-time batch progress reporting
     """,
     summary="Transcode multiple video files in efficient batch processing mode",
     parameters={
@@ -1007,12 +1006,12 @@ async def batch_transcode(
     automation. It supports all job states from initial queuing through completion or failure.
 
     Monitoring features:
-    • Real-time progress tracking with percentage completion
-    • Detailed status information (queued, processing, completed, failed, cancelled)
-    • Error diagnostics and troubleshooting information
-    • Job metadata including input/output paths and timing
-    • Performance metrics and resource utilization
-    • Batch job relationship tracking
+    - Real-time progress tracking with percentage completion
+    - Detailed status information (queued, processing, completed, failed, cancelled)
+    - Error diagnostics and troubleshooting information
+    - Job metadata including input/output paths and timing
+    - Performance metrics and resource utilization
+    - Batch job relationship tracking
     """,
     summary="Check the status and progress of a video transcode job with detailed monitoring",
     parameters={
@@ -1096,19 +1095,19 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     preventing resource exhaustion in batch processing scenarios.
 
     The cancellation process:
-    • Immediately stops active HandBrake encoding processes
-    • Removes queued jobs from the processing pipeline
-    • Cleans up temporary files and resources
-    • Updates job status to 'cancelled'
-    • Logs cancellation details for audit trails
-    • Frees system resources (CPU, memory, disk I/O)
+    - Immediately stops active HandBrake encoding processes
+    - Removes queued jobs from the processing pipeline
+    - Cleans up temporary files and resources
+    - Updates job status to 'cancelled'
+    - Logs cancellation details for audit trails
+    - Frees system resources (CPU, memory, disk I/O)
 
     Use cases:
-    • Emergency stop of problematic jobs
-    • Resource management during high system load
-    • Workflow interruption and cleanup
-    • Testing and development scenarios
-    • Error recovery and job management
+    - Emergency stop of problematic jobs
+    - Resource management during high system load
+    - Workflow interruption and cleanup
+    - Testing and development scenarios
+    - Error recovery and job management
     """,
     summary="Cancel a running or queued video transcode job with immediate termination",
     parameters={
@@ -1185,17 +1184,17 @@ async def cancel_job(job_id: str) -> bool:
     encoding options and selecting appropriate presets for specific transcoding requirements.
 
     Preset categories include:
-    • **Speed-focused**: Fast, Very Fast, Super Fast (prioritize speed over quality)
-    • **Quality-focused**: HQ, Super HQ, High Profile (prioritize quality over speed)
-    • **Device-specific**: Apple TV, Android, Chromecast, Roku, Gaming consoles
-    • **Resolution-specific**: 480p, 720p, 1080p, 4K presets
-    • **Custom presets**: User-created or package-installed presets
+    - **Speed-focused**: Fast, Very Fast, Super Fast (prioritize speed over quality)
+    - **Quality-focused**: HQ, Super HQ, High Profile (prioritize quality over speed)
+    - **Device-specific**: Apple TV, Android, Chromecast, Roku, Gaming consoles
+    - **Resolution-specific**: 480p, 720p, 1080p, 4K presets
+    - **Custom presets**: User-created or package-installed presets
 
     Advanced preset information:
-    • Preset names are standardized across HandBrake versions
-    • Each preset includes optimized encoder settings
-    • Hardware acceleration settings are preset-specific
-    • Audio/video filter configurations are included
+    - Preset names are standardized across HandBrake versions
+    - Each preset includes optimized encoder settings
+    - Hardware acceleration settings are preset-specific
+    - Audio/video filter configurations are included
     """,
     summary="Get a list of all available HandBrake presets for video encoding",
     parameters={},
@@ -1266,18 +1265,18 @@ async def get_presets() -> List[str]:
     discover available capabilities and select appropriate models for their use cases.
 
     MCP compatibility features:
-    • Standard MCP model discovery interface
-    • Rich metadata about each model/preset
-    • Categorization and tagging for model selection
-    • Version information and compatibility notes
-    • Integration guidance and best practices
+    - Standard MCP model discovery interface
+    - Rich metadata about each model/preset
+    - Categorization and tagging for model selection
+    - Version information and compatibility notes
+    - Integration guidance and best practices
 
     Model information includes:
-    • Model name and version
-    • Quality/speed characteristics
-    • Target use cases and platforms
-    • Hardware requirements
-    • Performance expectations
+    - Model name and version
+    - Quality/speed characteristics
+    - Target use cases and platforms
+    - Hardware requirements
+    - Performance expectations
     """,
     summary="Get list of loaded models (presets) - MCP compatibility endpoint",
     parameters={},
@@ -1347,28 +1346,28 @@ async def get_loaded_models() -> List[str]:
     debugging, integration verification, and system administration purposes.
 
     The tool performs live system analysis including:
-    • Real-time health and availability checks
-    • Dynamic capability discovery and validation
-    • Performance metrics and resource utilization
-    • Version compatibility verification
-    • Configuration validation and status
-    • Error detection and diagnostic information
+    - Real-time health and availability checks
+    - Dynamic capability discovery and validation
+    - Performance metrics and resource utilization
+    - Version compatibility verification
+    - Configuration validation and status
+    - Error detection and diagnostic information
 
     Status information includes:
-    • **Server Health**: Overall system status and readiness
-    • **Version Information**: Server, HandBrake CLI, and dependency versions
-    • **Capabilities**: Available presets, encoding options, and features
-    • **Performance Metrics**: Active jobs, resource usage, and limits
-    • **System Information**: Platform, architecture, and environment details
-    • **Diagnostics**: Error conditions and troubleshooting information
+    - **Server Health**: Overall system status and readiness
+    - **Version Information**: Server, HandBrake CLI, and dependency versions
+    - **Capabilities**: Available presets, encoding options, and features
+    - **Performance Metrics**: Active jobs, resource usage, and limits
+    - **System Information**: Platform, architecture, and environment details
+    - **Diagnostics**: Error conditions and troubleshooting information
 
     Use cases:
-    • Health monitoring and alerting
-    • Capacity planning and resource management
-    • Integration testing and validation
-    • Troubleshooting and diagnostics
-    • System administration and maintenance
-    • Performance optimization and tuning
+    - Health monitoring and alerting
+    - Capacity planning and resource management
+    - Integration testing and validation
+    - Troubleshooting and diagnostics
+    - System administration and maintenance
+    - Performance optimization and tuning
     """,
     summary="Get comprehensive system status including tools, configuration, and resources",
     parameters={},

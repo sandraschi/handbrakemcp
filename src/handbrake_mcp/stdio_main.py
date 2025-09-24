@@ -31,54 +31,18 @@ from handbrake_mcp.mcp_tools import register_tools_with_mcp
 # Register tools with the mcp instance
 register_tools_with_mcp(mcp)
 
-def process_new_file(file_path: Path):
-    """Process a new file detected by the watch service."""
-    logger.info(f"Processing new file: {file_path}")
-    try:
-        output_dir = settings.processed_folder or file_path.parent
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(processing_service.process_file(
-            input_path=file_path,
-            output_dir=output_dir,
-            preset=settings.default_preset,
-            delete_original=settings.delete_original_after_processing,
-        ))
-    except Exception as e:
-        logger.error(f"Error processing file {file_path}: {e}")
-
 def main():
     """Main stdio server function."""
     logger.info("Starting HandBrake MCP server (stdio mode)...")
 
-    # Initialize notification service
-    # For stdio servers, we initialize services synchronously
-    # The MCP client will handle the event loop
-    logger.info("Initializing notification service...")
-    try:
-        # Initialize notification service synchronously
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(notification_service.initialize())
-        logger.info("Notification service initialized")
-    except Exception as e:
-        logger.warning(f"Failed to initialize notification service: {e}")
-
-    # Initialize watch service
-    if settings.watch_folders:
-        logger.info(f"Initializing watch service for folders: {', '.join(str(f) for f in settings.watch_folders)}")
-        try:
-            loop.run_until_complete(watch_service.start(
-                callback=process_new_file,
-                watch_dirs=settings.watch_folders,
-            ))
-            logger.info("Watch service initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize watch service: {e}")
+    # Note: For stdio MCP servers, we don't initialize background services
+    # like notification_service or watch_service. These are meant for
+    # the FastAPI server mode. The MCP client (Claude Desktop) will
+    # handle the lifecycle and call the tools as needed.
 
     logger.info("HandBrake MCP server started successfully")
 
-    # Run the MCP server in stdio mode synchronously
+    # Run the MCP server in stdio mode
     mcp.run(transport="stdio")
 
 if __name__ == "__main__":
