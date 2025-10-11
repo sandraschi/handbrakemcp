@@ -1,0 +1,114 @@
+name: Build and Release MCPB Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., 1.0.0)'
+        required: false
+        default: '0.1.0'
+
+jobs:
+  build-mcpb:
+    name: Build MCPB Package
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install MCPB CLI
+      run: npm install -g @anthropic-ai/mcpb
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install "fastmcp>=2.12.0,<3.0.0"
+        pip install -r requirements.txt
+
+    - name: Create dist directory
+      run: mkdir -p dist
+
+    - name: Validate manifest.json
+      run: mcpb validate mcpb/manifest.json
+
+    - name: Build MCPB extension
+      run: |
+        mcpb pack . dist/
+      env:
+        MCPB_VERSION: ${{ github.event.inputs.version || '0.1.0' }}
+
+    - name: Sign MCPB extension (optional)
+      if: ${{ secrets.MCPB_SIGNING_KEY }}
+      run: |
+        echo "${{ secrets.MCPB_SIGNING_KEY }}" > signing.key
+        mcpb sign --key signing.key dist/*.mcpb
+        rm signing.key
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload MCPB artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: handbrake-mcp-mcpb
+        path: dist/*.mcpb
+        retention-days: 30
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*.mcpb
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        body: |
+          ## HandBrake MCP Server Release
+
+          Download the `.mcpb` file below and drag it to Claude Desktop for one-click installation.
+
+          ### Installation
+          1. Download the `.mcpb` file from the assets below
+          2. Drag the file to Claude Desktop
+          3. Configure HandBrake CLI path and preferences
+          4. Start transcoding videos!
+
+          ### Features
+          - Professional video transcoding with HandBrake CLI
+          - Batch processing and watch folder automation
+          - Real-time progress tracking
+          - Custom presets and extensive configuration
+          - Enterprise-grade error handling
+
+          ### Dependencies
+          - HandBrake CLI (external dependency)
+          - FastMCP 2.12.0+ (bundled)
+          - Python 3.8+ (built into Claude Desktop)
+
+          ### What's New
+          See the auto-generated release notes below.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Python package
+      run: python -m build
+
+    - name: Publish to PyPI
+      if: startsWith(github.ref, 'refs/tags/') && github.repository == 'sandraschi/handbrake-mcp'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}

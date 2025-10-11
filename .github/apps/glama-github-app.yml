@@ -1,0 +1,79 @@
+name: "Glama.ai GitHub App Integration"
+description: "GitHub App configuration for Glama.ai platform integration and quality monitoring"
+
+# GitHub App Configuration for Glama.ai Integration
+app:
+  name: "Glama.ai MCP Platform"
+  slug: "glama-ai"
+  url: "https://github.com/apps/glama-ai"
+
+# Repository Permissions Required
+permissions:
+  contents: read
+  metadata: read
+  pull_requests: read
+  issues: read
+  releases: read
+  workflows: read
+  repository_projects: read
+
+# Events to Monitor
+events:
+  - push
+  - pull_request
+  - release
+  - workflow_run
+  - repository
+
+# Integration Features
+features:
+  enabled: true
+  quality_monitoring: true
+  real_time_sync: true
+  automated_scanning: true
+  community_integration: true
+
+# Repository Configuration
+repository:
+  owner: "sandraschi"
+  name: "handbrakemcp"
+  full_name: "sandraschi/handbrakemcp"
+  default_branch: "main"
+
+# Quality Metrics Configuration
+quality_metrics:
+  ci_status: required
+  test_coverage: minimum_80_percent
+  documentation: complete
+  security: enabled
+  packaging: validated
+
+# Webhook Configuration
+webhooks:
+  enabled: true
+  url: "https://api.glama.ai/webhooks/github"
+  secret: "${{ secrets.GLAMA_WEBHOOK_SECRET }}"
+  ssl_verification: true
+
+# Platform Integration
+platform:
+  glama_url: "https://glama.ai"
+  repository_url: "https://github.com/sandraschi/handbrakemcp"
+  search_terms:
+    - "handbrakemcp"
+    - "handbrake"
+    - "video-transcoding"
+    - "mcp-server"
+  categories:
+    - "video-processing"
+    - "media-transcoding"
+    - "automation"
+
+# Maintenance Configuration
+maintenance:
+  auto_updates: true
+  quality_checks: daily
+  rescan_triggers:
+    - new_releases
+    - major_commits
+    - quality_improvements

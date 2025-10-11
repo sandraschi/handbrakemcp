@@ -1,0 +1,61 @@
+name: Glama.ai Webhook Configuration
+description: Webhook configuration for Glama.ai platform integration
+
+# Webhook events that Glama.ai monitors
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [ opened, synchronize, closed ]
+  release:
+    types: [ published, updated ]
+  workflow_run:
+    workflows: [ "CI", "Build MCPB", "Release" ]
+    types: [ completed ]
+  repository:
+    types: [ public ]
+
+# Glama.ai specific configuration
+glama:
+  enabled: true
+  platform_url: "https://glama.ai"
+  repository_id: "sandraschi/handbrakemcp"
+  quality_checks:
+    - ci_status
+    - test_results
+    - documentation_updates
+    - security_scans
+  update_triggers:
+    - releases
+    - major_commits
+    - quality_improvements
+
+# Webhook payload configuration
+webhook:
+  url: "https://api.glama.ai/webhooks/github"
+  content_type: "json"
+  secret: "${{ secrets.GLAMA_WEBHOOK_SECRET }}"
+  events:
+    - push
+    - pull_request
+    - release
+    - workflow_run
+
+# Quality monitoring
+quality_monitoring:
+  ci_workflows:
+    - name: "CI"
+      required: true
+      branches: [ "main", "develop" ]
+    - name: "Build MCPB"
+      required: true
+      branches: [ "main" ]
+  test_requirements:
+    minimum_coverage: 80
+    required_tests: 64
+    allowed_failures: 0
+  documentation_checks:
+    - README.md
+    - CHANGELOG.md
+    - SECURITY.md
+    - CONTRIBUTING.md

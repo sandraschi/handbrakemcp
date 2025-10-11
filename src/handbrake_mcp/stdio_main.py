@@ -25,11 +25,20 @@ mcp = FastMCP(
     version="0.1.0",
 )
 
-# Import MCP tools
-from handbrake_mcp.mcp_tools import register_tools_with_mcp
+# Import MCP tools modules first
+import handbrake_mcp.tools.handbrake_tools
+import handbrake_mcp.tools.help_tools
+import handbrake_mcp.tools.status_tools
 
-# Register tools with the mcp instance
-register_tools_with_mcp(mcp)
+# Set MCP instance for decorator-based tool registration
+handbrake_mcp.tools.handbrake_tools.set_mcp_instance(mcp)
+handbrake_mcp.tools.help_tools.set_mcp_instance(mcp)
+handbrake_mcp.tools.status_tools.set_mcp_instance(mcp)
+
+# Register all pending tools with decorators
+handbrake_mcp.tools.handbrake_tools.register_pending_tools()
+handbrake_mcp.tools.help_tools.register_pending_tools()
+handbrake_mcp.tools.status_tools.register_pending_tools()
 
 def main():
     """Main stdio server function."""

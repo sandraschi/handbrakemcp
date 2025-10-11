@@ -128,7 +128,7 @@ async def health_check() -> dict:
     return {"status": "ok", "version": "0.1.0"}
 
 
-# MCP tools are registered in stdio_main.py for stdio mode
+# MCP tools are registered in stdio_main.py for stdio mode from tools.utility_tools
 
 
 # For DXT compatibility and dual mode support
