@@ -1,4 +1,4 @@
-﻿# Transformer Models: Architecture and Applications
+# Transformer Models: Architecture and Applications
 
 ## Overview
 Transformer models have revolutionized natural language processing and beyond. This document covers the architecture, variants, and applications of transformer models.

@@ -1,4 +1,4 @@
-﻿# Windsurf IDE: The Do's andon'ts
+# Windsurf IDE: The Do's andon'ts
 
 ## Best Practices for Agenticollaboration
 

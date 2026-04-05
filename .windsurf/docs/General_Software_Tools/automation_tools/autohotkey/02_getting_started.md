@@ -1,4 +1,4 @@
-﻿# 2. Getting Started with AutoHotkey
+# 2. Getting Started with AutoHotkey
 
 ## Installation
 

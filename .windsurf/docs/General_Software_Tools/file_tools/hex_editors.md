@@ -1,4 +1,4 @@
-﻿# Hex Editors: HxD and Beyond
+# Hex Editors: HxD and Beyond
 
 ## Overview
 Hex editors are specialized tools that allow viewing and editing binary files athexadecimalevel. This documentation covers HxD (a popular free hex editor for Windows) and other notable alternatives.

@@ -1,4 +1,4 @@
-﻿# Stuart Russell (1962-Present)
+# Stuart Russell (1962-Present)
 
 ## Overview
 Stuart Russell is a British computer scientist known for his contributions to artificial intelligence, particularly in the areas of machine learning, probabilistic reasoning, and AI safety. He is a professor of Computer Science athe University of California, Berkeley, and co-author of the standard AI textbook "Artificial Intelligence: A Modern Approach." Russell is a leading voice in discussions about the long-term future of AI and its impact on humanity.

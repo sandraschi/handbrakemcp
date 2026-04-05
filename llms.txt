@@ -1,0 +1,25 @@
+# handbrake-mcp
+> This directory contains documentation related to achieving GLAMA AI Gold standard status for the Advanced Memory MCP project. GLAMA AI is a quality assurance platform that evaluates MCP servers agains...
+
+This project includes automated llms.txt generation for AI accessibility.
+
+## Docs
+- [Readme](docs\glama\README.md): This directory contains documentation related to achieving GLAMA AI Gold standard status for the Adv...
+- [Readme](docs\mcp-technical\README.md): **Technical guides for MCP server development, deployment, and troubleshooting**
+- [Readme](docs\development\README.md): **Guides, best practices, and lessons learned for developing notepadpp-mcp**
+- [Readme](docs\github\README.md): > **Purpose**: Comprehensive GitHub configuration guide to avoid hours of trial-and-error setup.
+- [Readme](docs\glama-platform\README.md): **Complete guide to achieving and maintaining Gold Status on Glama.ai for HandBrake MCP Server**
+- [Ci Cd Readme](CI-CD-README.md): This document describes the comprehensive CI/CD pipeline for the HandBrake MCP Server project.
+- [Readme](docs\mcpb-packaging\README.md): **Complete guide to packaging and distributing MCP servers with MCPB**
+- [Readme](docs\repository-protection\README.md): **Complete guide to keeping your notepadpp-mcp repository safe**
+- [Readme](README.md): [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licens...
+- [Installation](docs\installation.md): - **Python**: 3.8 or higher
+
+## Api
+- [  Init  ](src\handbrake_mcp\api\v1\endpoints\__init__.py): Api definitions and implementations
+- [  Init  ](src\handbrake_mcp\api\v1\endpoints\__init__.py): Endpoints definitions and implementations
+
+## Configuration
+- [Pyproject](pyproject.toml): Python project configuration and dependencies
+- [Package](web_sota\package.json): Node.js project configuration and dependencies
+- [Config](.git\config): Application configuration files

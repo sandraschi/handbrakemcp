@@ -1,4 +1,4 @@
-﻿# 3. Hotkeys and Hotstrings: The Core of AHK
+# 3. Hotkeys and Hotstrings: The Core of AHK
 
 Hotkeys and Hotstrings are the bread and butter of AutoHotkey. They are the simplest features to learn and provide the most immediate payoff in terms of productivity. Mastering them is the first major step to taking control of your workflow.
 

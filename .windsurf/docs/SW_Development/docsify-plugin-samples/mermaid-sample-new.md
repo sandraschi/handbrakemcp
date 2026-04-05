@@ -1,4 +1,4 @@
-﻿# Mermaid.js Integration - Complete Guide
+# Mermaid.js Integration - Complete Guide
 
 ## Table of Contents
 

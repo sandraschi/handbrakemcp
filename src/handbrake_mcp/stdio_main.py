@@ -29,6 +29,7 @@ mcp = FastMCP(
 import handbrake_mcp.tools.handbrake_tools
 import handbrake_mcp.tools.help_tools
 import handbrake_mcp.tools.status_tools
+from .transport import run_server, run_server_async
 
 # Set MCP instance for decorator-based tool registration
 handbrake_mcp.tools.handbrake_tools.set_mcp_instance(mcp)
@@ -52,7 +53,7 @@ def main():
     logger.info("HandBrake MCP server started successfully")
 
     # Run the MCP server in stdio mode
-    mcp.run(transport="stdio")
+    run_server(mcp, server_name="handbrake-mcp")
 
 if __name__ == "__main__":
     # For stdio MCP servers, run main() synchronously

@@ -1,4 +1,4 @@
-﻿# Diffusion Models
+# Diffusion Models
 
 ## Overview
 Diffusion models are a class of generative models that learn to generate data by gradually denoising normally distributed noise. They have achieved remarkable results in image generationeration, audio synthesis, and more.

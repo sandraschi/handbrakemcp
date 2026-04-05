@@ -1,4 +1,4 @@
-﻿# Wiener Linien API Guide & Vienna Public Transport System
+# Wiener Linien API Guide & Vienna Public Transport System
 
 ## Table of Contents
 1. [Wiener Linien API Overview](#wiener-linien-api-overview)

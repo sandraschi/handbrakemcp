@@ -1,4 +1,4 @@
-﻿# Windsurf IDE: Tips and Tricks
+# Windsurf IDE: Tips and Tricks
 
 ## Mastering the Agentic Workflow
 

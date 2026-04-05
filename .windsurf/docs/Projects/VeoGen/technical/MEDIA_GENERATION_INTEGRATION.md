@@ -1,4 +1,4 @@
-﻿# Media Generation Integration with Gemini CLI
+# Media Generation Integration with Gemini CLI
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-07-04  

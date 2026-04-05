@@ -1,0 +1,17 @@
+# MCPB Pack Exclusion List
+tests/
+.git/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+target/
+docs/
+scripts/
+.github/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+Cargo.lock

@@ -1,4 +1,4 @@
-﻿# Digital Afterlives: Mind Uploading and the Fading Qualiargument
+# Digital Afterlives: Mind Uploading and the Fading Qualiargument
 
 ## Introduction: The Dream of Digital Immortality
 

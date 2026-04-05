@@ -1,4 +1,4 @@
-﻿# Geoffrey Hinton (1947-Present)
+# Geoffrey Hinton (1947-Present)
 
 ## Overview
 Geoffrey Everest Hinton is a British-Canadian cognitive psychologist and computer scientist, most noted for his work on artificial neural networks. He is one of the most influential figures in the development of deep learning and neural networks, co-recipient of the 2018 Turing Award (often called the "Nobel Prize of Computing") with Yann LeCun and Yoshua Bengio.

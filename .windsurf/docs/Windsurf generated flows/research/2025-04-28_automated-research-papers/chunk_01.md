@@ -1,4 +1,4 @@
-﻿---
+---
 title: chunk_01
 type: note
 created: 2025-08-07T21:55:00

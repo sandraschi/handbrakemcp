@@ -1,4 +1,4 @@
-﻿# Richard S. Sutton (1957-Present)
+# Richard S. Sutton (1957-Present)
 
 ## Overview
 Richard S. Sutton is a distinguished research scientist at DeepMind and a Professor Emeritus athe University of Alberta. Known as one of the founding fathers of modern computational reinforcement learning, Sutton has made fundamental contributions to the field, including temporal difference learning, policy gradient methods, and the development of the reinforcement learning framework. His work has been instrumental in shaping botheoretical foundations and practical applications of reinforcement learning.

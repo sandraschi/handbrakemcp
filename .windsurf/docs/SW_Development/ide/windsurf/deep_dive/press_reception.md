@@ -1,4 +1,4 @@
-﻿# Windsurf IDE: Press and Community Reception
+# Windsurf IDE: Press and Community Reception
 
 ## Industry Buzz and Initial Impressions
 

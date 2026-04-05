@@ -1,19 +1,17 @@
-"""Configuration management for HandBrake MCP."""
-import os
 from pathlib import Path
-from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Application settings."""
 
     # Server configuration
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "info"
-    api_key: Optional[str] = None
+    api_key: str | None = None
 
     # MCP Transport configuration
     mcp_transport: str = "stdio"
@@ -25,35 +23,35 @@ class Settings(BaseModel):
     default_preset: str = "Fast 1080p30"
 
     # Watch folder configuration
-    watch_folders: List[Path] = Field(default_factory=list)
-    processed_folder: Optional[Path] = None
+    watch_folders: list[Path] = Field(default_factory=list)
+    processed_folder: Path | None = None
     delete_original_after_processing: bool = False
-    file_patterns: List[str] = Field(
+    file_patterns: list[str] = Field(
         default_factory=lambda: ["*.mp4", "*.mkv", "*.avi", "*.mov", "*.m4v"]
     )
 
     # Notification configuration
-    webhook_url: Optional[str] = None
-    webhook_events: List[str] = Field(
+    webhook_url: str | None = None
+    webhook_events: list[str] = Field(
         default_factory=lambda: ["job_started", "job_completed", "job_failed"]
     )
     email_notifications: bool = False
-    email_recipients: List[str] = Field(default_factory=list)
-    email_sender: Optional[str] = None
+    email_recipients: list[str] = Field(default_factory=list)
+    email_sender: str | None = None
 
     # SMTP configuration for email notifications
-    smtp_server: Optional[str] = Field(None, description="SMTP server hostname")
-    smtp_port: Optional[int] = Field(587, description="SMTP server port")
-    smtp_username: Optional[str] = Field(None, description="SMTP username")
-    smtp_password: Optional[str] = Field(None, description="SMTP password")
+    smtp_server: str | None = Field(None, description="SMTP server hostname")
+    smtp_port: int | None = Field(587, description="SMTP server port")
+    smtp_username: str | None = Field(None, description="SMTP username")
+    smtp_password: str | None = Field(None, description="SMTP password")
     smtp_use_tls: bool = Field(True, description="Use TLS encryption for SMTP")
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": False,
-        "env_prefix": "",  # Allow environment variables without prefix
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_prefix="",  # Allow environment variables without prefix
+    )
 
     @field_validator("watch_folders", mode="before")
     @classmethod
