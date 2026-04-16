@@ -9,7 +9,8 @@ import {
     Wrench,
     Activity,
     BookOpen,
-    Grid3X3
+    Grid3X3,
+    Play
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         { href: '/', label: 'Overview', icon: LayoutDashboard },
         { href: '/tools', label: 'Tools', icon: Wrench },
         { href: '/status', label: 'Status', icon: Activity },
+        { href: '/transcode', label: 'Transcode', icon: Play },
         { href: '/help', label: 'Help', icon: BookOpen },
         { href: '/apps', label: 'Fleet Navigation', icon: Grid3X3 },
         { href: '/settings', label: 'Settings', icon: Settings },

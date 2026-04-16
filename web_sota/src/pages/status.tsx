@@ -2,18 +2,29 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Cpu, HardDrive, Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/common/utils";
 
 export function Status() {
     const { data, isLoading } = useQuery({
         queryKey: ["health"],
         queryFn: async () => {
-            const resp = await fetch("http://localhost:10875/health");
+            const resp = await fetch("http://127.0.0.1:10875/health");
             return resp.json();
         },
         refetchInterval: 2000,
     });
 
+    const { data: jobsData } = useQuery({
+        queryKey: ["jobs"],
+        queryFn: async () => {
+            const resp = await fetch("http://127.0.0.1:10875/api/jobs");
+            return resp.json();
+        },
+        refetchInterval: 1000, // Faster updates for jobs
+    });
+
     const system = data?.system || {};
+    const jobs = jobsData?.jobs || [];
 
     return (
         <div className="space-y-6">
@@ -84,6 +95,43 @@ export function Status() {
                 </Card>
             </div>
 
+            {jobs.length > 0 && (
+                <Card className="border-slate-800 bg-slate-950/50 backdrop-blur-xl">
+                    <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-blue-400" />
+                            Transcoding Queue
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {jobs.map((job: any) => (
+                                <div key={job.job_id} className="rounded-lg border border-slate-800 bg-slate-900/30 p-4 space-y-2">
+                                    <div className="flex justify-between items-start">
+                                        <div className="space-y-1 overflow-hidden">
+                                            <div className="text-sm font-medium text-slate-100 italic truncate max-w-[250px]">
+                                                {job.input?.split(/[/\\]/).pop() || 'Unknown File'}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{job.preset || 'Default Preset'}</div>
+                                        </div>
+                                        <div className={cn(
+                                            "text-[10px] uppercase font-bold px-2 py-0.5 rounded border",
+                                            job.status === 'processing' ? "text-blue-400 border-blue-400/20 bg-blue-400/10" :
+                                            job.status === 'completed' ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/10" :
+                                            "text-slate-400 border-slate-400/20 bg-slate-400/10"
+                                        )}>
+                                            {job.status}
+                                        </div>
+                                    </div>
+                                    <Progress value={job.progress} className="h-1.5" indicatorClassName="bg-blue-500" />
+                                    <div className="text-[10px] text-right text-slate-500">{Math.round(job.progress)}%</div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             <Card className="border-slate-800 bg-slate-950/50 backdrop-blur-xl">
                 <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
@@ -94,9 +142,9 @@ export function Status() {
                 <CardContent>
                     <div className="space-y-4">
                         <HealthItem label="FastAPI Backend" status={!isLoading && data?.status === "ok" ? "healthy" : "error"} />
+                        <HealthItem label="HandBrake Engine" status={system.gpu?.model !== "Not Detected" ? "healthy" : "warning"} />
                         <HealthItem label="FastMCP Bridge" status="healthy" />
                         <HealthItem label="Watch Service" status="healthy" />
-                        <HealthItem label="Notification Service" status="healthy" />
                     </div>
                 </CardContent>
             </Card>

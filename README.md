@@ -12,7 +12,7 @@
 [![Security](https://img.shields.io/badge/Security-Enabled-red)](SECURITY.md)
 [![Community](https://img.shields.io/badge/Community-Active-blueviolet)](https://github.com/sandraschi/handbrake-mcp/discussions)
 
-A **production-ready**, **FastMCP 2.12.0-compliant** server for professional video transcoding using HandBrakeCLI. Features enterprise-grade CI/CD with real CLI integration testing, comprehensive MkDocs documentation deployed to GitHub Pages, automated release management with changelog generation, community health automation, and modern GitHub features including Discussions, Wiki, and professional issue/PR templates.
+A **production-ready**, **FastMCP 3.2.0-compliant** server for professional video transcoding using HandBrakeCLI. Features an **Industrial SOTA Dashboard (v13.1)**, enterprise-grade CI/CD, and robust 127.0.0.1 networking for maximum stability.
 
 ##  Features
 
@@ -98,147 +98,67 @@ sudo apt install handbrake-cli
 HandBrakeCLI --version
 ```
 
-##  Installation
+## 🚀 Installation & Setup
 
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
+### 1. Prerequisites
+- **Python 3.12+** - Core runtime (managed via `uv` recommended).
+- **HandBrakeCLI** - Transcoding engine.
+- **[uv](https://docs.astral.sh/uv/)** - Modern Python package and tool manager.
 
-###  Quick Start
-Run immediately via `uvx`:
-```bash
+### 2. Quick Deployment
+You can run the server directly without manual installation using `uvx`:
+```powershell
 uvx handbrake-mcp-stdio
 ```
 
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
+### 3. Claude Desktop Integration
+Add the following to your `claude_desktop_config.json`:
 ```json
-"mcpServers": {
-  "handbrake-mcp-stdio": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/handbrake-mcp", "run", "handbrake-mcp-stdio"]
-  }
+"handbrake-mcp": {
+  "command": "uv",
+  "args": [
+    "--directory", 
+    "D:/Dev/repos/handbrake-mcp", 
+    "run", 
+    "handbrake-mcp-stdio"
+  ]
 }
 ```
-##  Installation
 
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
+## 📊 Industrial Dashboard (v13.1)
+The project includes a premium, SOTA-compliant dashboard for real-time transcoding management.
 
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx handbrake-mcp-stdio
+### Starting the Dashboard
+```powershell
+cd web_sota
+.\start.bat
 ```
+Visit `http://localhost:51595` to access the control plane.
 
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "handbrake-mcp-stdio": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/handbrake-mcp", "run", "handbrake-mcp-stdio"]
-  }
-}
-```
-##  Installation
-
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
-
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx handbrake-mcp-stdio
-```
-
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "handbrake-mcp-stdio": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/handbrake-mcp", "run", "handbrake-mcp-stdio"]
-  }
-}
-```
-##  Installation
-
-### Prerequisites
-- [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
-- Python 3.12+
-
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx handbrake-mcp-stdio
-```
-
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "handbrake-mcp-stdio": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/handbrake-mcp", "run", "handbrake-mcp-stdio"]
-  }
-}
-```
-####  Packaging & Distribution
-
+## 📦 Packaging & Distribution
 This repository is SOTA 2026 compliant and uses the officially validated `@anthropic-ai/mcpb` workflow for distribution.
 
-##### Pack Extension
-To generate a `.mcpb` distribution bundle with complete source code and automated build exclusions:
-```bash
-# SOTA 2026 standard pack command
+```powershell
+# Generate a .mcpb distribution bundle
 mcpb pack . dist/handbrake-mcp.mcpb
 ```
 
-##  Installation
-
 ### Prerequisites
 - [uv](https://docs.astral.sh/uv/) installed (RECOMMENDED)
 - Python 3.12+
 
-###  Quick Start
-Run immediately via `uvx`:
-```bash
-uvx handbrake-mcp-stdio
+## 🛠️ Usage
+
+### **Start the Server**
+
+#### FastMCP stdio (Default for Claude)
+```powershell
+uv run python -m handbrake_mcp.server
 ```
 
-###  Claude Desktop Integration
-Add to your `claude_desktop_config.json`:
-```json
-"mcpServers": {
-  "handbrake-mcp-stdio": {
-    "command": "uv",
-    "args": ["--directory", "D:/Dev/repos/handbrake-mcp", "run", "handbrake-mcp-stdio"]
-  }
-}
-```
-##  Usage
-
-###  **Start the Server**
-
-#### Development Mode
-```bash
-# Using uvicorn (recommended for development)
-uvicorn handbrake_mcp.main:app --reload --host 0.0.0.0 --port 8000
-
-# Using Python module
-python -m handbrake_mcp.main
-```
-
-#### Production Mode
-```bash
-# With gunicorn (recommended for production)
-gunicorn handbrake_mcp.main:app -w 4 -k uvicorn.workers.UvicornWorker
-
-# Docker deployment
-docker run -p 8000:8000 handbrake-mcp:latest
+#### FastAPI Service (For Dashboard)
+```powershell
+uv run python -m handbrake_mcp.server --http
 ```
 
 ###  **Discover Available Tools**
@@ -262,6 +182,19 @@ search_tools("batch")
 # Browse tools by category
 tool_categories()
 ```
+
+###  **Industrial Dashboard**
+
+The server includes a premium, SOTA-v13.1 compliant dashboard in `web_sota`. To run it:
+
+```bash
+cd web_sota
+npm install
+npm run dev
+```
+
+> [!IMPORTANT]
+> **Windows Networking**: If you encounter "Connection Refused" errors, ensure the dashboard is configured to connect to `127.0.0.1` rather than `localhost`. Modern Windows systems resolve `localhost` to IPv6 `::1`, which may bypass the backend IPv4 listeners.
 
 ###  **Core MCP Tools**
 
@@ -414,224 +347,17 @@ This will show:
 
 This repository uses the SOTA 2026 packing workflow. See the [Installation](#installation-options) section for details on generating distribution bundles.
 
-##  CI/CD Pipeline
 
-### **Automated Workflows**
-The project includes enterprise-grade CI/CD with comprehensive automation:
+## 📖 Documentation & Resources
+For detailed technical guides, standards, and advanced usage, please refer to the local documentation hub:
+- **[Documentation Index](docs/index.md)**: Your primary entry point for guides and help.
+- **[CHANGELOG.md](CHANGELOG.md)**: Track version history and industrialization milestones.
 
-- ** Multi-platform Testing**: Ubuntu, Windows, macOS with Python 3.8-3.11
-- ** SOTA Packaging**: Automated `.mcpb` bundle creation with source transparency
-- ** Docker Building**: Multi-stage builds with security scanning and monitoring
-- ** Quality Gates**: Linting, type checking, security scanning
-- ** Automated Releases**: GitHub releases with standardized distribution bundles
+## 🤝 Contributing
+Contributions are welcome! Please follow the materialist efficiency standards-based development patterns outlined in our internal documentation.
 
-### **Available Workflows**
-
-#### **Main CI/CD Pipeline** (`.github/workflows/ci.yml`)
-- **Quality checks**: Black, isort, flake8, mypy, security scanning, bandit
-- **Multi-platform testing**: Ubuntu, Windows, macOS with Python 3.8-3.11
-- **Real CLI integration testing**: HandBrakeCLI validation with actual transcoding
-- **SOTA packaging**: Automated `.mcpb` bundle creation with dependency validation
-- **Automated releases**: GitHub releases with changelog generation and validation
-
-#### **Documentation Deployment** (`.github/workflows/docs.yml`)
-- **MkDocs building**: Professional documentation with Material theme
-- **GitHub Pages deployment**: Automated deployment with custom domain support
-- **Wiki synchronization**: Automatic wiki updates with release information
-- **Link validation**: Continuous checking of documentation integrity
-
-#### **Release Orchestration** (`.github/workflows/release-orchestration.yml`)
-- **Comprehensive release automation**: Multi-stage release process
-- **Version synchronization**: Update versions across all project files
-- **Community notifications**: GitHub Discussions and automated announcements
-- **Release validation**: Package integrity and functionality testing
-
-#### **Community Health** (`.github/workflows/community-health.yml`)
-- **Stale issue management**: Auto-cleanup of inactive issues/PRs
-- **Community metrics**: Repository health and activity reporting
-- **Link validation**: Documentation integrity monitoring
-
-#### **Version Management** (`.github/workflows/version-management.yml`)
-- **Automated version bumping**: patch, minor, major semantic versioning
-- **Multi-file updates**: Synchronized version updates across all files
-- **Git operations**: Automatic commits, tagging, and release creation
-
-#### **Dependency Updates** (`.github/workflows/dependency-updates.yml`)
-- **Weekly security scans**: Automated vulnerability detection
-- **Dependency updates**: Regular package updates with comprehensive testing
-- **Security reporting**: Detailed dependency health and vulnerability reports
-
-#### **Docker Build & Deploy** (`.github/workflows/docker.yml`)
-- **Multi-stage builds**: Production and development optimized images
-- **Security scanning**: Trivy vulnerability scanning with SBOM generation
-- **Monitoring integration**: Prometheus metrics and health checks
-- **Multi-architecture support**: Linux amd64/arm64 builds
-
-### **Deployment Options**
-
-#### ** Python Development**
-```bash
-# Local development with hot reload
-uvicorn handbrake_mcp.main:app --reload
-
-# Production deployment
-gunicorn handbrake_mcp.main:app -w 4 -k uvicorn.workers.UvicornWorker
-```
-
-#### ** Docker Deployment**
-```bash
-# Development
-docker-compose up -d
-
-# Production
-docker-compose -f docker-compose.yml --profile with-monitoring up -d
-```
-
-#### ** Kubernetes Deployment**
-```bash
-# Deploy to Kubernetes
-kubectl apply -f k8s/
-
-# Scale as needed
-kubectl scale deployment handbrake-mcp --replicas=5
-```
-
-#### ** DXT Desktop Integration**
-```bash
-# Build and install DXT package
-python dxt/scripts/build.py
-# Copy to Claude Desktop packages directory and restart
-```
-
-### **Monitoring & Observability**
-
-- ** Prometheus Metrics**: Real-time performance monitoring
-- ** Grafana Dashboards**: Visual monitoring and alerting
-- ** Health Checks**: Application and system health verification
-- ** Structured Logging**: JSON logging with configurable levels
-- ** Error Tracking**: Comprehensive error reporting and diagnostics
-
-##  Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-##  License
-
+## 📜 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-##  Resources & Documentation
-
-### ** Core Documentation**
-- ** [MkDocs Documentation](https://sandraschi.github.io/handbrake-mcp/)** - Complete user guide and API reference
-- ** [CI/CD Setup Guide](CI-CD-README.md)** - Comprehensive CI/CD pipeline documentation
-- ** [DXT Packaging Guide](dxt/README.md)** - DXT package building and installation
-- ** [Project Status Report](docs/PROJECT_STATUS_REPORT.md)** - Current implementation status
-- ** [GitHub Setup Guide](docs/GITHUB_SETUP_REPORT.md)** - Complete GitHub automation template
-- ** [Repository Status Report](docs/REPOSITORY_STATUS_REPORT_2025.md)** - 2025 comprehensive evaluation
-
-### ** External Resources**
-- **[FastMCP Documentation](https://fastmcp.readthedocs.io/)** - MCP framework documentation
-- **[DXT Documentation](https://github.com/anthropics/dxt)** - Desktop Extension Toolkit
-- **[HandBrake CLI Documentation](https://handbrake.fr/docs/)** - Video transcoding engine
-- **[Anthropic MCP](https://github.com/anthropics/mcp)** - Model Control Protocol
-- **[Docker Documentation](https://docs.docker.com/)** - Containerization platform
-- **[Kubernetes Documentation](https://kubernetes.io/docs/)** - Container orchestration
-
-### ** Support & Community**
-- ** [GitHub Issues](https://github.com/sandraschi/handbrake-mcp/issues)** - Bug reports and feature requests
-- ** [GitHub Discussions](https://github.com/sandraschi/handbrake-mcp/discussions)** - Community discussions
-- ** Email Support** - For enterprise inquiries and support
-
-##  **Implementation Summary**
-
-### ** What's Been Delivered**
-
-| Component | Status | Features |
-|-----------|--------|----------|
-| ** Self-Documenting System** |  Complete | Multiline decorators with comprehensive metadata |
-| ** Advanced Help System** |  Complete | Basic, detailed, full, category-based, and troubleshooting help |
-| ** System Monitoring** |  Complete | Real-time health checks and resource monitoring |
-| ** Enterprise CI/CD** |  Complete | 8 comprehensive workflows with quality gates |
-| ** Real CLI Integration Testing** |  Complete | Actual HandBrakeCLI calls with progress validation |
-| ** Professional Documentation** |  Complete | MkDocs with GitHub Pages and automated deployment |
-| ** Release Automation** |  Complete | Changelog generation, validation, community notifications |
-| ** Modern GitHub Features** |  Complete | Discussions, Wiki, templates, community health |
-| ** Docker Support** |  Complete | Multi-stage builds with security scanning |
-| ** Kubernetes Ready** |  Complete | Production deployment manifests |
-| ** SOTA Packaging** |  Complete | Standardized `.mcpb` bundles with source transparency |
-| ** Monitoring** |  Complete | Prometheus metrics and Grafana dashboards |
-| ** Security** |  Complete | Vulnerability scanning, SBOM, security policies |
-
-### ** Key Achievements**
-
-1. ** Production-Ready Self-Documentation**
-   - All 12 tools fully documented with comprehensive metadata
-   - Multilevel help system (basic, detailed, full, categories, troubleshooting)
-   - Advanced help types (examples, performance, system overview)
-   - Tool search and discovery capabilities
-
-2. ** Enterprise-Grade CI/CD with Real CLI Testing**
-   - 8 comprehensive GitHub Actions workflows with quality gates
-   - Multi-platform testing (Ubuntu, Windows, macOS) with Python 3.8-3.11
-   - Real HandBrakeCLI integration testing with actual transcoding validation
-   - Automated SOTA packaging with comprehensive dependency validation
-   - Docker builds with security scanning, SBOM generation, and monitoring
-
-3. ** Professional Documentation System**
-   - MkDocs with Material theme deployed to GitHub Pages
-   - Versioned documentation with automatic deployment
-   - GitHub Wiki automation with release synchronization
-   - Comprehensive API reference and user guides
-   - Link validation and documentation integrity monitoring
-
-4. ** Automated Release Management**
-   - Changelog generation from git history analysis
-   - Release validation with package integrity checks
-   - Community notifications via GitHub Discussions
-   - Version synchronization across all project files
-   - Post-release maintenance and milestone management
-
-5. ** Modern GitHub Repository Features**
-   - GitHub Discussions for community engagement
-   - Professional issue and PR templates
-   - Community health automation (stale issue management)
-   - Security policy and responsible disclosure process
-   - Contributing guidelines and code of conduct
-   - Repository profile enhancement and discoverability
-
-6. ** Advanced Tool Capabilities**
-   - Real-time progress tracking with detailed status monitoring
-   - Batch processing with intelligent queue management
-   - Comprehensive error handling and diagnostic capabilities
-   - Hardware acceleration support with automatic detection
-   - Resource management and optimization features
-
-7. ** Comprehensive Monitoring & Observability**
-   - Real-time system health monitoring and metrics
-   - Performance tracking and resource utilization
-   - Structured logging with configurable levels
-   - Health checks and automated diagnostic tools
-   - Prometheus metrics and Grafana dashboard integration
-
-### ** Quick Start Commands**
-
-```bash
-# Get started quickly
-git clone https://github.com/sandraschi/handbrake-mcp.git
-cd handbrake-mcp
-python dxt/setup-venv.py  # Set up virtual environment
-mcpb pack . dist/handbrake-mcp.mcpb  # Build SOTA distribution bundle
-
-# Explore the documentation system
-multilevel_help("basic")  # Basic help overview
-help("transcode_video", "detailed")  # Detailed tool help
-advanced_help("examples")  # Usage examples
-system_status()  # System health check
-
-# Use the tools
-transcode_video("/input.mp4", "/output.mkv", preset="Fast 1080p30")
-batch_transcode([{"input_path": "file1.mp4", "output_path": "file1.mkv"}])
-get_job_status("job_12345")  # Monitor progress
-```
-
-** Your HandBrake MCP Server is now a comprehensive, production-ready system with enterprise-grade documentation, CI/CD, and monitoring capabilities!**
+---
+**HandBrake MCP | Industrial Transcoding Control Plane | 2026**

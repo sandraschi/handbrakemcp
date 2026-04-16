@@ -6,7 +6,7 @@ export function Tools() {
     const { data: toolsData, isLoading } = useQuery({
         queryKey: ["tools"],
         queryFn: async () => {
-            const resp = await fetch("http://localhost:10875/mcp/tools");
+            const resp = await fetch("http://127.0.0.1:10875/api/tools");
             return resp.json();
         },
     });

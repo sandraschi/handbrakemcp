@@ -1,5 +1,5 @@
 import { Activity, Zap } from "lucide-react";
-import { FLEET_REGISTRY } from '@/common/apps-catalog';
+import { APPS_CATALOG, FleetMember } from '@/common/apps-catalog';
 import { FleetCard } from '@/common/FleetCard';
 
 export function Apps() {
@@ -17,7 +17,7 @@ export function Apps() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {FLEET_REGISTRY.map((member) => (
+                {APPS_CATALOG.map((member: FleetMember) => (
                     <FleetCard
                         key={member.id}
                         member={member}

@@ -7,8 +7,7 @@ import {
     MonitorSmartphone,
     Box,
     User,
-    BookOpen,
-    LayoutDashboard
+    BookOpen
 } from 'lucide-react';
 
 export interface FleetMember {
@@ -21,7 +20,7 @@ export interface FleetMember {
     category: 'Transit' | 'Media' | 'Infra' | 'Control' | 'Creative' | 'Knowledge' | 'Core';
 }
 
-export const FLEET_REGISTRY: FleetMember[] = [
+export const APPS_CATALOG: FleetMember[] = [
     {
         id: "vienna-live-mcp",
         name: "Vienna Live MCP",

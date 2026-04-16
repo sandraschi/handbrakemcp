@@ -1,6 +1,6 @@
 'use client';
 
-import { APPS_CATALOG } from '@/common/apps-catalog';
+import { APPS_CATALOG, FleetMember } from '@/common/apps-catalog';
 import { LayoutGrid, ExternalLink, HelpCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
@@ -44,14 +44,14 @@ export function Topbar() {
 
                             <div className="h-px bg-slate-800 my-1" />
 
-                            {APPS_CATALOG.map((app) => (
+                            {APPS_CATALOG.map((app: FleetMember) => (
                                 <DropdownMenu.Item key={app.id} asChild>
                                     <a
-                                        href={app.url}
+                                        href={`http://127.0.0.1:${app.port}`}
                                         className="flex w-full select-none items-center rounded-sm px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white focus:bg-slate-800 focus:text-white outline-none cursor-pointer"
                                     >
                                         <app.icon className="mr-2 h-4 w-4 text-slate-400" />
-                                        <span>{app.label}</span>
+                                        <span>{app.name}</span>
                                         <ExternalLink className="ml-auto h-3 w-3 opacity-50" />
                                     </a>
                                 </DropdownMenu.Item>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
+import { LoggerPanel } from './logger-panel';
 // import { Toaster } from '@/components/ui/toaster';
 
 interface AppLayoutProps {
@@ -24,7 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     return (
         <div className="flex min-h-screen flex-col bg-slate-950 text-slate-50 font-sans selection:bg-emerald-500/30">
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden pb-10">
                 <Sidebar collapsed={collapsed} onToggle={handleToggle} />
                 <div className="flex flex-1 flex-col overflow-hidden">
                     <Topbar />
@@ -35,7 +36,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </main>
                 </div>
             </div>
+            <LoggerPanel />
             {/* <Toaster /> */}
         </div>
     );
 }
+

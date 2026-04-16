@@ -1,4 +1,4 @@
-# Webapp Start - Standardized SOTA (Auto-Repaired V2.5)
+# Webapp Start - Standardized SOTA v13.1
 $WebPort = 10874
 $BackendPort = 10875
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
@@ -13,23 +13,38 @@ foreach ($p in $pids) {
 
 # 2. Setup
 Set-Location $PSScriptRoot
-if (-not (Test-Path "node_modules")) { npm install }
+if (-not (Test-Path "node_modules")) { 
+    Write-Host "node_modules missing. Installing dependencies..." -ForegroundColor Gray
+    npm install 
+}
 
 # 3. Start the Python backend (Background)
-Write-Host "Starting Python backend on port $BackendPort ..." -ForegroundColor Cyan
-
-# Use TRIPLE backtick to ensure $env:PYTHONPATH reaches the REAL shell
-$backendCmd = "`$env:PYTHONPATH = '$PSScriptRoot;$PSScriptRoot\src'; Set-Location '$PSScriptRoot'; uv run python -m handbrake_mcp.server --http --port $BackendPort --log-level info"
-
+Write-Host "Starting Python backend on http://127.0.0.1:$BackendPort ..." -ForegroundColor Cyan
+$backendCmd = "`$env:PYTHONPATH = '$ProjectRoot\src'; Set-Location '$ProjectRoot'; uv run python -m handbrake_mcp.server --http --port $BackendPort --log-level info"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WindowStyle Normal
 
-# 4. Run server (Vite dev)
-Write-Host "Starting Vite frontend on port $WebPort ..." -ForegroundColor Green
+# 4. Wait for Backend to be ready
+Write-Host "Waiting for backend telemetry sync..." -ForegroundColor Gray
+$backendUrl = "http://127.0.0.1:$BackendPort/health"
+for ($i = 0; $i -lt 30; $i++) {
+    try {
+        $resp = Invoke-WebRequest -Uri $backendUrl -TimeoutSec 1 -UseBasicParsing -ErrorAction Stop
+        if ($resp.StatusCode -eq 200) { 
+            Write-Host "Backend Online." -ForegroundColor Emerald
+            break 
+        }
+    } catch {
+        Write-Host "." -NoNewline -ForegroundColor Gray
+        Start-Sleep -Seconds 1
+    }
+}
 
-# 4b. Launch background task to open browser once frontend is ready (Auto-opened by Antigravity)
+# 5. Start Vite frontend
+Write-Host "`nStarting Vite frontend on port $WebPort ..." -ForegroundColor Green
 $frontendUrl = "http://127.0.0.1:$WebPort/"
 $pollAndOpen = "for (`$i = 0; `$i -lt 60; `$i++) { try { `$null = Invoke-WebRequest -Uri '$frontendUrl' -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop; Start-Process '$frontendUrl'; exit } catch { Start-Sleep -Seconds 1 } }"
 Start-Process powershell -ArgumentList "-NoProfile", "-WindowStyle", "Hidden", "-Command", $pollAndOpen
 
 Write-Host "Browser will open automatically when Vite is ready." -ForegroundColor Gray
 npm run dev -- --port $WebPort --host
+

@@ -49,10 +49,19 @@ class HandBrakeService:
     
     def _find_handbrake(self) -> Path:
         """Find HandBrakeCLI in the system PATH or use configured path."""
+        # 1. Check standard PATH/configured path
         handbrake_path = shutil.which(settings.hbb_path)
+        
+        # 2. Check WinGet fallback if standard fails
+        if not handbrake_path:
+            logger.info(f"HandBrakeCLI not in PATH, checking WinGet fallback: {settings.winget_hbb_path}")
+            if Path(settings.winget_hbb_path).exists():
+                handbrake_path = settings.winget_hbb_path
+
         if not handbrake_path:
             raise HandBrakeError(
-                f"HandBrakeCLI not found. Please install HandBrakeCLI and ensure it's in your PATH "
+                f"HandBrakeCLI not found. Checked PATH and {settings.winget_hbb_path}. "
+                f"Please install HandBrakeCLI and ensure it's in your PATH "
                 f"or set HBB_PATH in your environment variables."
             )
         return Path(handbrake_path)
