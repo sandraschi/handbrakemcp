@@ -8,11 +8,13 @@ Provides dual-mode support (stdio/HTTP) and modular tool registration.
 import subprocess
 import argparse
 import logging
+import os
 import sys
 import psutil
 from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP, Context
+from fastmcp.server import create_proxy
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -97,6 +99,19 @@ USAGE:
 3. Use status_ops() to monitor active encoding jobs.
 """,
 )
+
+# MCP Bridge: proxy tools from other MCP servers via MCP_BRIDGE_URLS
+_bridge_proxies: list[str] = []
+bridge_urls = os.getenv("MCP_BRIDGE_URLS", "")
+if bridge_urls:
+    for url in bridge_urls.split(","):
+        url = url.strip()
+        if url:
+            try:
+                mcp.add_provider(create_proxy(url))
+                _bridge_proxies.append(url)
+            except Exception:
+                pass
 
 # Initialize FastAPI for custom routes and dashboard support
 # Standard FastAPI pattern with CORS support
