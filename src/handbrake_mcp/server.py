@@ -121,10 +121,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
-from fastapi.middleware.cors import CORSMiddleware
+_tauri = os.environ.get("HANDBRAKE_TAURI", "").lower() in ("1", "true", "yes")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "*",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
+    ],
+    allow_origin_regex=r"https?://tauri\.localhost(:\d+)?" if _tauri else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -211,11 +217,28 @@ async def get_capabilities():
 # CUSTOM HTTP ROUTES (FastAPI)
 # =============================================================================
 
+@app.get("/api/v1/diagnostics")
+async def diagnostics():
+    """Fleet diagnostics endpoint for CUA-NSIS smoke testing."""
+    import platform
+    tools = await mcp.list_tools()
+    return {
+        "status": "ok",
+        "server": "handbrake-mcp",
+        "version": "1.1.1",
+        "uptime_seconds": 0,
+        "tool_count": len(tools),
+        "tools": [{"name": t.name} for t in tools],
+        "system": {"windows": platform.system() == "Windows"},
+        "errors": [],
+    }
+
 @app.get("/health")
 async def health():
     """System health endpoint for the SOTA dashboard."""
     cpu_percent = psutil.cpu_percent()
     memory = psutil.virtual_memory()
+    tools = await mcp.list_tools()
 
     # Attempt to get GPU temp via nvidia-smi
     gpu_temp = "N/A"
@@ -245,7 +268,9 @@ async def health():
 
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "server": "handbrake-mcp",
+        "version": "1.1.1",
+        "tool_count": len(tools),
         "system": {
             "cpu_percent": cpu_percent,
             "memory": {
@@ -346,24 +371,30 @@ async def start_transcode(data: dict):
 # Mount the MCP app to the FastAPI instance
 # FastMCP 3.2 provides http_app() for this purpose
 # This returns a Starlette app that we mount as a sub-app
-mcp_app = mcp.http_app()
+mcp_app = mcp.http_app(path="/")
 app.mount("/mcp", mcp_app)
 
 def run():
     """SOTA-compliant entry point with CLI argument support."""
     import uvicorn
+
+    # Check MCP_PORT env var (set by Tauri backend.rs spawn) before CLI
+    env_port = os.environ.get("MCP_PORT") or os.environ.get("PORT")
+    env_host = os.environ.get("MCP_HOST", "127.0.0.1")
+
     parser = argparse.ArgumentParser(description="HandBrake MCP Server")
-    parser.add_argument("--http", action="store_true", help="Run in HTTP mode")
-    parser.add_argument("--port", type=int, default=10875, help="Port for HTTP mode")
+    parser.add_argument("--http", action="store_true", help="Run in HTTP mode", default=bool(env_port))
+    parser.add_argument("--host", type=str, default=env_host, help="Host for HTTP mode")
+    parser.add_argument("--port", type=int, default=int(env_port) if env_port else 10875, help="Port for HTTP mode")
     parser.add_argument("--log-level", type=str, default="info", help="Log level")
     args, unknown = parser.parse_known_args()
 
     if args.http:
-        logger.info(f"Starting HandBrake MCP Bridge on http://0.0.0.0:{args.port}")
-        logger.info(f"MCP Endpoint: http://0.0.0.0:{args.port}/mcp")
-        logger.info(f"Health Endpoint: http://0.0.0.0:{args.port}/health")
-        logger.info(f"Capabilities Endpoint: http://0.0.0.0:{args.port}/api/capabilities")
-        uvicorn.run(app, host="0.0.0.0", port=args.port, log_level=args.log_level.lower())
+        logger.info(f"Starting HandBrake MCP Bridge on http://{args.host}:{args.port}")
+        logger.info(f"MCP Endpoint: http://{args.host}:{args.port}/mcp")
+        logger.info(f"Health Endpoint: http://{args.host}:{args.port}/health")
+        logger.info(f"Capabilities Endpoint: http://{args.host}:{args.port}/api/capabilities")
+        uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level.lower())
     else:
         logger.info("Starting HandBrake MCP on stdio transport")
         mcp.run(transport="stdio")

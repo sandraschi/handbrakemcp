@@ -10,7 +10,8 @@ import {
     Activity,
     BookOpen,
     Grid3X3,
-    Play
+    Play,
+    ScrollText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         { href: '/help', label: 'Help', icon: BookOpen },
         { href: '/apps', label: 'Fleet Navigation', icon: Grid3X3 },
         { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/logging', label: 'Logging', icon: ScrollText },
     ];
 
     return (
@@ -72,7 +74,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 })}
             </nav>
 
-            <div className="border-t border-slate-800 p-2">
+            {/* Collapse toggle at the top per fleet standard */}
+            <div className="border-b border-slate-800 px-4 py-2">
                 <button
                     onClick={onToggle}
                     className="flex w-full items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"

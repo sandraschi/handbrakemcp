@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -8,6 +9,8 @@ import { Transcode } from '@/pages/transcode';
 import { Help } from '@/pages/help';
 import { Apps } from '@/pages/apps';
 import { Settings } from '@/pages/settings';
+import Logging from '@/pages/Logging';
+import { useZoom } from '@/lib/use-zoom';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +22,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  useZoom();
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -31,6 +35,7 @@ function App() {
             <Route path="/help" element={<Help />} />
             <Route path="/apps" element={<Apps />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/logging" element={<Logging />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppLayout>

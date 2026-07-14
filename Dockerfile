@@ -1,5 +1,5 @@
 # Multi-stage Docker build for HandBrake MCP Server
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
 # Set build arguments
 ARG VERSION=latest
@@ -22,37 +22,26 @@ LABEL org.opencontainers.image.title="HandBrake MCP Server" \
       org.opencontainers.image.source="https://github.com/sandraschi/handbrake-mcp" \
       org.opencontainers.image.licenses="MIT"
 
-# Install system dependencies for HandBrake
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    software-properties-common \
-    && rm -rf /var/lib/apt/lists/*
-
-# Add HandBrake PPA and install HandBrake CLI
-RUN wget -O - https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x86C81B6C22A0DB1F | apt-key add - && \
-    add-apt-repository ppa:stebbins/handbrake-releases && \
-    apt-get update && apt-get install -y handbrake-cli && \
+# Install HandBrake CLI from Debian repos
+RUN apt-get update && apt-get install -y handbrake-cli && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
 # Copy requirements files
-COPY requirements*.txt ./
-COPY dxt/requirements-dxt.txt ./dxt/
+COPY pyproject.toml uv.lock ./
+COPY README.md ./
+COPY .env.example ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-dev.txt && \
-    pip install --no-cache-dir -r dxt/requirements-dxt.txt
+# Install Python dependencies (fleet standard: uv)
+RUN pip install uv && uv sync --no-dev --no-install-project
 
 # Copy source code
 COPY src/ ./src/
-COPY dxt/ ./dxt/
-COPY README.md ./
-COPY .env.example ./
+
+# Finish install with source
+RUN uv sync --no-dev
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash handbrake && \
@@ -69,18 +58,21 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 EXPOSE 8000
 
 # Set default command
-CMD ["python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Production image
-FROM python:3.11-slim as production
+FROM python:3.13-slim as production
 
-# Install runtime dependencies
+# Install runtime dependencies (handbrake-cli from Debian repos)
 RUN apt-get update && apt-get install -y \
     handbrake-cli \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy uv binary for production CMD
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+
 # Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
 # Copy application code
 COPY --from=builder /app /app
@@ -103,24 +95,17 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 EXPOSE 8000
 
 # Set default command
-CMD ["python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Development image
 FROM builder as development
 
 # Install development dependencies
-RUN pip install --no-cache-dir \
-    pytest \
-    pytest-asyncio \
-    black \
-    isort \
-    mypy \
-    flake8 \
-    bandit
+RUN uv sync --group dev
 
 # Set development environment
 ENV ENVIRONMENT=development \
     LOG_LEVEL=debug
 
 # Override command for development
-CMD ["python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uv", "run", "python", "-m", "uvicorn", "handbrake_mcp.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

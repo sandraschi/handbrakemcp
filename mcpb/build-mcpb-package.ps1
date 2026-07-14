@@ -68,19 +68,19 @@ function Write-Step {
 function Write-Success {
     param([string]$Message)
 
-    Write-ColoredOutput "✅ $Message" $Green
+    Write-ColoredOutput "âœ… $Message" $Green
 }
 
 function Write-Warning {
     param([string]$Message)
 
-    Write-ColoredOutput "⚠️  $Message" $Yellow
+    Write-ColoredOutput "âš ï¸  $Message" $Yellow
 }
 
 function Write-Error {
     param([string]$Message)
 
-    Write-ColoredOutput "❌ $Message" $Red
+    Write-ColoredOutput "âŒ $Message" $Red
 }
 
 function Test-Prerequisites {
@@ -323,10 +323,10 @@ function Main {
     # Show banner
     Write-ColoredOutput @"
 
-╔══════════════════════════════════════════════════════════════╗
-║                 HandBrake MCP - MCPB Builder                 ║
-║                   Professional Video Transcoding             ║
-╚══════════════════════════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-
+â•‘                 HandBrake MCP - MCPB Builder                 â•‘
+â•‘                   Professional Video Transcoding             â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 "@ $Cyan
 
@@ -364,15 +364,15 @@ function Main {
     # Show success message
     Write-ColoredOutput @"
 
-╔══════════════════════════════════════════════════════════════╗
-║                      BUILD COMPLETE!                        ║
-╚══════════════════════════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-
+â•‘                      BUILD COMPLETE!                        â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 Package: $($packagePath.Name)
 Location: $($packagePath.FullName)
 Size: $([math]::Round($packagePath.Length / 1MB, 2)) MB
 
-🎯 Ready for distribution!
+ðŸŽ¯ Ready for distribution!
 
 Next steps:
 1. Test installation: Drag package to Claude Desktop
@@ -380,7 +380,7 @@ Next steps:
 3. Test video transcoding tools
 4. Share with users or publish to registry
 
-📦 Happy transcoding!
+ðŸ“¦ Happy transcoding!
 
 "@ $Green
 }

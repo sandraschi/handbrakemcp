@@ -9,18 +9,12 @@ description = "HandBrake MCP Server for video transcoding"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
-authors = [
-    {name = "Your Name", email = "your.email@example.com"},
-]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
     "Topic :: Multimedia :: Video :: Conversion",
 ]
 dependencies = [
@@ -29,7 +23,7 @@ dependencies = [
     "pydantic>=2.11.7",
     "python-dotenv>=0.19.0",
     "watchdog>=2.1.6",
-    "fastmcp>=3.2.0,<4",
+    "fastmcp>=3.4.2,<4",
     "httpx>=0.23.0",
     "psutil>=5.8.0",
     "ruff>=0.15.2",
@@ -49,10 +43,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/handbrakemcp"
-Documentation = "https://github.com/yourusername/handbrakemcp#readme"
-Issues = "https://github.com/yourusername/handbrakemcp/issues"
-Source = "https://github.com/yourusername/handbrakemcp"
+Homepage = "https://github.com/sandraschi/handbrake-mcp"
+Documentation = "https://github.com/sandraschi/handbrake-mcp#readme"
+Issues = "https://github.com/sandraschi/handbrake-mcp/issues"
+Source = "https://github.com/sandraschi/handbrake-mcp"
 
 [project.scripts]
 handbrake-mcp-stdio = "handbrake_mcp.server:run"
@@ -62,13 +56,13 @@ handbrake-mcp = "handbrake_mcp.server:run"
 where = ["src"]
 
 [tool.black]
-line-length = 88
-target-version = ["py38"]
+line-length = 120
+target-version = ["py312"]
 include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 120
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -76,7 +70,7 @@ use_parentheses = true
 ensure_newline_before_comments = true
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

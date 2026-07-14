@@ -8,15 +8,15 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # Server configuration
-    host: str = "0.0.0.0"
-    port: int = 8000
+    host: str = "127.0.0.1"
+    port: int = 10875
     log_level: str = "info"
     api_key: str | None = None
 
     # MCP Transport configuration
     mcp_transport: str = "stdio"
     mcp_host: str = "127.0.0.1"
-    mcp_port: int = 8000
+    mcp_port: int = 10875
 
     # HandBrake configuration
     hbb_path: str = "HandBrakeCLI"
