@@ -1,20 +1,20 @@
 """Main FastMCP application for HandBrake MCP server."""
 
 import logging
+import subprocess
+import time
 from pathlib import Path
 
+import psutil
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from handbrake_mcp.core.config import settings
 from handbrake_mcp.services.notification_service import notification_service
 from handbrake_mcp.services.processing_service import processing_service
 from handbrake_mcp.services.watch_service import watch_service
 from handbrake_mcp.stdio_main import mcp
-import psutil
-import time
-import subprocess
-from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(
@@ -78,9 +78,7 @@ async def startup_event():
 
     # Initialize watch folders
     if settings.watch_folders:
-        logger.info(
-            f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}"
-        )
+        logger.info(f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}")
         await watch_service.start(
             callback=process_new_file,
             watch_dirs=settings.watch_folders,
@@ -113,9 +111,7 @@ async def main():
 
     # Initialize watch folders
     if settings.watch_folders:
-        logger.info(
-            f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}"
-        )
+        logger.info(f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}")
         await watch_service.start(
             callback=process_new_file,
             watch_dirs=settings.watch_folders,

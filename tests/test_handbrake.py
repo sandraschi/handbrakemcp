@@ -1,26 +1,44 @@
 """Tests for HandBrake MCP server."""
+
 import asyncio
 import os
 import shutil
 import subprocess
 import tempfile
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-from handbrake_mcp.services.handbrake import HandBrakeService, TranscodeJob
+import pytest
+
 from handbrake_mcp.core.config import Settings
+from handbrake_mcp.services.handbrake import HandBrakeService, TranscodeJob
 
 
 def create_test_video(output_path: Path, duration_seconds: int = 2) -> bool:
     """Create a minimal test video using ffmpeg if available, otherwise skip."""
     try:
         # Try to create a simple test video
-        result = subprocess.run([
-            "ffmpeg", "-f", "lavfi", "-i", f"testsrc=duration={duration_seconds}:size=320x240:rate=1",
-            "-f", "lavfi", "-i", f"sine=frequency=1000:duration={duration_seconds}",
-            "-c:v", "libx264", "-c:a", "aac", "-shortest", str(output_path)
-        ], capture_output=True, timeout=30)
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                "-f",
+                "lavfi",
+                "-i",
+                f"testsrc=duration={duration_seconds}:size=320x240:rate=1",
+                "-f",
+                "lavfi",
+                "-i",
+                f"sine=frequency=1000:duration={duration_seconds}",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                "-shortest",
+                str(output_path),
+            ],
+            capture_output=True,
+            timeout=30,
+        )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return False
@@ -48,7 +66,7 @@ async def unit_test_setup():
     service = HandBrakeService()
 
     # Patch subprocess calls
-    patcher = patch('asyncio.create_subprocess_exec')
+    patcher = patch("asyncio.create_subprocess_exec")
     mock_subprocess = patcher.start()
 
     # Mock process with proper HandBrake output simulation
@@ -63,7 +81,7 @@ async def unit_test_setup():
         b'{"Progress": 50.0}\n',
         b'{"Progress": 75.0}\n',
         b'{"Progress": 100.0}\n',
-        b'',  # End of output
+        b"",  # End of output
     ]
     mock_process.stdout = mock_stdout
     mock_process.stderr = AsyncMock()
@@ -72,13 +90,13 @@ async def unit_test_setup():
     mock_subprocess.return_value = mock_process
 
     yield {
-        'service': service,
-        'test_dir': test_dir,
-        'input_file': input_file,
-        'output_file': output_file,
-        'settings': settings,
-        'patcher': patcher,
-        'mock_process': mock_process
+        "service": service,
+        "test_dir": test_dir,
+        "input_file": input_file,
+        "output_file": output_file,
+        "settings": settings,
+        "patcher": patcher,
+        "mock_process": mock_process,
     }
 
     # Cleanup
@@ -90,40 +108,40 @@ async def unit_test_setup():
 @pytest.mark.unit
 class TestHandBrakeServiceUnit:
     """Unit tests for HandBrakeService using mocks."""
-    
+
     async def test_transcode_success(self, unit_test_setup):
         """Test successful video transcode."""
         setup = unit_test_setup
-        job_id = await setup['service'].transcode(
-            input_path=str(setup['input_file']),
-            output_path=str(setup['output_file']),
+        job_id = await setup["service"].transcode(
+            input_path=str(setup["input_file"]),
+            output_path=str(setup["output_file"]),
             preset="Fast 1080p30",
         )
 
         assert job_id is not None
-        assert job_id in setup['service'].jobs
+        assert job_id in setup["service"].jobs
 
         # Check job status
-        job = setup['service'].jobs[job_id]
+        job = setup["service"].jobs[job_id]
         assert job.status == "queued"
 
         # Simulate job completion
-        await setup['service']._run_transcode_job(job)
+        await setup["service"]._run_transcode_job(job)
         assert job.status == "completed"
         assert job.progress == 100.0
-    
+
     async def test_get_job_status(self, unit_test_setup):
         """Test getting job status."""
         setup = unit_test_setup
-        job_id = await setup['service'].transcode(
-            input_path=str(setup['input_file']),
-            output_path=str(setup['output_file']),
+        job_id = await setup["service"].transcode(
+            input_path=str(setup["input_file"]),
+            output_path=str(setup["output_file"]),
         )
 
-        job = await setup['service'].get_job_status(job_id)
+        job = await setup["service"].get_job_status(job_id)
         assert job is not None
         assert job.job_id == job_id
-    
+
     async def test_cancel_job(self, unit_test_setup):
         """Test job cancellation."""
         setup = unit_test_setup
@@ -132,25 +150,25 @@ class TestHandBrakeServiceUnit:
         job_id = "test_cancel_job"
         job = TranscodeJob.model_construct(
             job_id=job_id,
-            input_path=setup['input_file'],
-            output_path=setup['output_file'],
+            input_path=setup["input_file"],
+            output_path=setup["output_file"],
             status="processing",
-            process=setup['mock_process'],
+            process=setup["mock_process"],
         )
-        setup['service'].jobs[job_id] = job
+        setup["service"].jobs[job_id] = job
 
         # Test cancellation
-        result = await setup['service'].cancel_job(job_id)
+        result = await setup["service"].cancel_job(job_id)
         assert result is True
         assert job.status == "cancelled"
-    
+
     async def test_get_presets(self, unit_test_setup):
         """Test getting HandBrake presets."""
         setup = unit_test_setup
         # Mock the _run_handbrake method
-        with patch.object(setup['service'], '_run_handbrake') as mock_run:
+        with patch.object(setup["service"], "_run_handbrake") as mock_run:
             mock_run.return_value = "Available presets:\n  Fast 1080p30\n  HQ 1080p30\n  Very Fast 1080p30\n"
-            presets = await setup['service'].get_presets()
+            presets = await setup["service"].get_presets()
             assert "Fast 1080p30" in presets
             assert "HQ 1080p30" in presets
             assert "Very Fast 1080p30" in presets
@@ -172,7 +190,7 @@ class TestHandBrakeServiceIntegration:
             # Fallback: create a minimal video file for testing file operations
             with open(self.input_file, "wb") as f:
                 # Write a minimal MP4 header + some dummy data to make it look like a video file
-                f.write(b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41mp42iso5dash\x00\x00\x00\x08free' + b'x' * 1000)
+                f.write(b"\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41mp42iso5dash\x00\x00\x00\x08free" + b"x" * 1000)
 
         # Initialize service with real HandBrake
         self.service = HandBrakeService()
@@ -222,8 +240,7 @@ class TestHandBrakeServiceIntegration:
 
         # Should contain some common presets
         preset_names = [p.lower() for p in presets]
-        self.assertTrue(any("fast" in name for name in preset_names) or
-                       any("1080p" in name for name in preset_names))
+        self.assertTrue(any("fast" in name for name in preset_names) or any("1080p" in name for name in preset_names))
 
     async def test_real_get_version(self):
         """Test getting HandBrake version with real CLI."""
@@ -232,8 +249,7 @@ class TestHandBrakeServiceIntegration:
         self.assertNotEqual(version, "unknown")
 
         # Version should be in format like "1.5.1"
-        import re
-        self.assertRegex(version, r'\d+\.\d+\.\d+')
+        self.assertRegex(version, r"\d+\.\d+\.\d+")
 
     async def test_real_job_status_tracking(self):
         """Test job status tracking during real transcoding."""
@@ -264,10 +280,7 @@ class TestHandBrakeServiceIntegration:
                     break
 
         # Run monitoring and transcoding concurrently
-        await asyncio.gather(
-            monitor_progress(),
-            self.service._run_transcode_job(job)
-        )
+        await asyncio.gather(monitor_progress(), self.service._run_transcode_job(job))
 
         # Verify we got progress updates
         self.assertGreater(len(progress_updates), 0)
@@ -296,7 +309,7 @@ class TestHandBrakeServiceIntegration:
         # Wait for cancellation to complete
         try:
             await asyncio.wait_for(transcode_task, timeout=5)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             transcode_task.cancel()
 
         self.assertTrue(result)

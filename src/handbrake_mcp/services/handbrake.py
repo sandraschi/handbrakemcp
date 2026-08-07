@@ -1,11 +1,10 @@
 """HandBrake service for video transcoding."""
+
 import asyncio
 import json
 import logging
 import shutil
-import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -16,22 +15,24 @@ logger = logging.getLogger(__name__)
 
 class HandBrakeError(Exception):
     """Custom exception for HandBrake related errors."""
+
     pass
 
 
 class TranscodeJob(BaseModel):
     """Model for a transcoding job."""
+
     model_config = {"arbitrary_types_allowed": True}
 
     job_id: str
     input_path: Path
     output_path: Path
     preset: str = settings.default_preset
-    options: Dict[str, Union[str, int, float, bool]] = Field(default_factory=dict)
+    options: dict[str, str | int | float | bool] = Field(default_factory=dict)
     status: str = "pending"
     progress: float = 0.0
-    error: Optional[str] = None
-    process: Optional[asyncio.subprocess.Process] = None
+    error: str | None = None
+    process: asyncio.subprocess.Process | None = None
 
 
 class HandBrakeService:
@@ -40,18 +41,18 @@ class HandBrakeService:
     def __init__(self):
         self.handbrake_path = self._find_handbrake()
         self.handbrake_version = None
-        self.jobs: Dict[str, TranscodeJob] = {}
-        self._supported_presets: List[str] = []
+        self.jobs: dict[str, TranscodeJob] = {}
+        self._supported_presets: list[str] = []
         self._max_concurrent_jobs = 5  # Rate limiting
         self._max_file_size_gb = 10  # Maximum file size in GB
         self._min_file_size_bytes = 1024  # Minimum file size in bytes
         self._max_option_value_length = 1000  # Maximum length for option values
-    
+
     def _find_handbrake(self) -> Path:
         """Find HandBrakeCLI in the system PATH or use configured path."""
         # 1. Check standard PATH/configured path
         handbrake_path = shutil.which(settings.hbb_path)
-        
+
         # 2. Check WinGet fallback if standard fails
         if not handbrake_path:
             logger.info(f"HandBrakeCLI not in PATH, checking WinGet fallback: {settings.winget_hbb_path}")
@@ -65,19 +66,20 @@ class HandBrakeService:
                 f"or set HBB_PATH in your environment variables."
             )
         return Path(handbrake_path)
-    
+
     async def get_handbrake_version(self) -> str:
         """Get the HandBrake CLI version."""
         if self.handbrake_version is None:
             try:
                 result = await self._run_handbrake(["--version"])
                 # Parse version from output like "HandBrake 1.5.1 (2023010100)"
-                lines = result.strip().split('\n')
+                lines = result.strip().split("\n")
                 if lines:
                     version_line = lines[0]
                     # Extract version number from the line
                     import re
-                    version_match = re.search(r'HandBrake\s+([\d.]+)', version_line)
+
+                    version_match = re.search(r"HandBrake\s+([\d.]+)", version_line)
                     if version_match:
                         self.handbrake_version = version_match.group(1)
                     else:
@@ -89,7 +91,7 @@ class HandBrakeService:
                 self.handbrake_version = "unknown"
         return self.handbrake_version
 
-    async def get_presets(self) -> List[str]:
+    async def get_presets(self) -> list[str]:
         """Get list of available HandBrake presets."""
         if not self._supported_presets:
             try:
@@ -116,10 +118,10 @@ class HandBrakeService:
                 raise HandBrakeError(f"Failed to get presets: {e}")
         return self._supported_presets
 
-    def _parse_presets_from_output(self, output: str) -> List[str]:
+    def _parse_presets_from_output(self, output: str) -> list[str]:
         """Parse preset names from HandBrake CLI output."""
         presets = []
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
 
         for line in lines:
             line = line.strip()
@@ -128,16 +130,16 @@ class HandBrakeService:
 
             # Try different parsing patterns based on HandBrake CLI output format
             # Pattern 1: "  Preset Name (category)"
-            if line.startswith('  '):
+            if line.startswith("  "):
                 preset_name = line.strip()
-                if '(' in preset_name:
-                    preset_name = preset_name.split('(')[0].strip()
+                if "(" in preset_name:
+                    preset_name = preset_name.split("(")[0].strip()
                 presets.append(preset_name)
 
             # Pattern 2: Lines starting with preset names
-            elif not line.startswith('+') and not line.startswith('Preset') and len(line) > 3:
+            elif not line.startswith("+") and not line.startswith("Preset") and len(line) > 3:
                 # Remove leading numbers or bullets
-                cleaned_line = line.lstrip('0123456789.- ')
+                cleaned_line = line.lstrip("0123456789.- ")
                 if cleaned_line and len(cleaned_line) > 2:
                     presets.append(cleaned_line)
 
@@ -146,13 +148,13 @@ class HandBrakeService:
         presets.sort()
 
         return presets
-    
+
     async def transcode(
         self,
-        input_path: Union[str, Path],
-        output_path: Union[str, Path],
-        preset: Optional[str] = None,
-        options: Optional[Dict[str, Union[str, int, float, bool]]] = None,
+        input_path: str | Path,
+        output_path: str | Path,
+        preset: str | None = None,
+        options: dict[str, str | int | float | bool] | None = None,
     ) -> str:
         """Start a transcoding job with rate limiting and validation.
 
@@ -181,7 +183,9 @@ class HandBrakeService:
         file_size = input_path.stat().st_size
         max_file_size = self._max_file_size_gb * 1024 * 1024 * 1024
         if file_size > max_file_size:
-            raise ValueError(f"Input file too large: {file_size / (1024*1024*1024):.1f}GB (max: {self._max_file_size_gb}GB)")
+            raise ValueError(
+                f"Input file too large: {file_size / (1024 * 1024 * 1024):.1f}GB (max: {self._max_file_size_gb}GB)"
+            )
 
         if file_size < self._min_file_size_bytes:
             raise ValueError(f"Input file too small: {file_size} bytes (min: {self._min_file_size_bytes} bytes)")
@@ -189,7 +193,9 @@ class HandBrakeService:
         # Rate limiting: Check concurrent jobs
         running_jobs = len([job for job in self.jobs.values() if job.status == "processing"])
         if running_jobs >= self._max_concurrent_jobs:
-            raise ValueError(f"Maximum concurrent jobs ({self._max_concurrent_jobs}) reached. Please wait for existing jobs to complete.")
+            raise ValueError(
+                f"Maximum concurrent jobs ({self._max_concurrent_jobs}) reached. Please wait for existing jobs to complete."
+            )
 
         # Check system resources before starting new job
         await self._check_system_resources()
@@ -219,22 +225,22 @@ class HandBrakeService:
 
         return job_id
 
-    def _validate_and_secure_path(self, path: Union[str, Path]) -> Path:
+    def _validate_and_secure_path(self, path: str | Path) -> Path:
         """Validate and secure file path to prevent directory traversal attacks."""
         # Convert to string for validation
         path_str = str(path)
 
         # Security: Prevent dangerous characters (allow colon for Windows drive letters)
-        dangerous_chars = ['<', '>', '"', '|', '?', '*']
+        dangerous_chars = ["<", ">", '"', "|", "?", "*"]
         for char in dangerous_chars:
             if char in path_str:
                 raise ValueError(f"Invalid characters in path: {path}")
 
         # Allow single colon for Windows drive letters (e.g., C:\)
-        colon_count = path_str.count(':')
+        colon_count = path_str.count(":")
         if colon_count > 1:
             raise ValueError(f"Invalid path format: {path}")
-        if colon_count == 1 and not (len(path_str) > 1 and path_str[1] == ':'):
+        if colon_count == 1 and not (len(path_str) > 1 and path_str[1] == ":"):
             raise ValueError(f"Invalid colon usage in path: {path}")
 
         # Convert to Path object and resolve
@@ -249,7 +255,7 @@ class HandBrakeService:
 
         # Validate file extension for input files
         if path_obj.is_file():
-            allowed_extensions = {'.mp4', '.mkv', '.avi', '.mov', '.m4v', '.wmv', '.flv', '.webm'}
+            allowed_extensions = {".mp4", ".mkv", ".avi", ".mov", ".m4v", ".wmv", ".flv", ".webm"}
             if path_obj.suffix.lower() not in allowed_extensions:
                 raise ValueError(f"Unsupported file format: {path_obj.suffix}")
 
@@ -262,16 +268,39 @@ class HandBrakeService:
 
         return path_obj
 
-    def _sanitize_options(self, options: Dict[str, Union[str, int, float, bool]]) -> Dict[str, Union[str, int, float, bool]]:
+    def _sanitize_options(self, options: dict[str, str | int | float | bool]) -> dict[str, str | int | float | bool]:
         """Sanitize options to prevent command injection and ensure safety."""
         safe_options = {}
 
         # Allowed HandBrake CLI options to prevent injection
         allowed_keys = {
-            'quality', 'encoder', 'audio', 'ab', 'ar', 'acodec', 'aname', 'aencoder',
-            'subtitle', 'scodec', 'sencoder', 'width', 'height', 'crop', 'deinterlace',
-            'denoise', 'deblock', 'colorspace', 'format', 'optimize', 'ipod-atom',
-            'use-opencl', 'use-qsv', 'use-nvenc', 'preset', 'input', 'output'
+            "quality",
+            "encoder",
+            "audio",
+            "ab",
+            "ar",
+            "acodec",
+            "aname",
+            "aencoder",
+            "subtitle",
+            "scodec",
+            "sencoder",
+            "width",
+            "height",
+            "crop",
+            "deinterlace",
+            "denoise",
+            "deblock",
+            "colorspace",
+            "format",
+            "optimize",
+            "ipod-atom",
+            "use-opencl",
+            "use-qsv",
+            "use-nvenc",
+            "preset",
+            "input",
+            "output",
         }
 
         for key, value in options.items():
@@ -282,7 +311,7 @@ class HandBrakeService:
                 continue
 
             # Sanitize key by removing dangerous characters
-            safe_key = "".join(c for c in safe_key if c.isalnum() or c in ['-', '_'])
+            safe_key = "".join(c for c in safe_key if c.isalnum() or c in ["-", "_"])
 
             # Sanitize value based on type
             if isinstance(value, bool):
@@ -300,10 +329,14 @@ class HandBrakeService:
                 # Sanitize string values
                 safe_value = str(value).strip()
                 if len(safe_value) > self._max_option_value_length:
-                    logger.warning(f"Option value too long: {len(safe_value)} chars (max: {self._max_option_value_length})")
+                    logger.warning(
+                        f"Option value too long: {len(safe_value)} chars (max: {self._max_option_value_length})"
+                    )
                     continue
                 # Remove dangerous characters that could be used for injection
-                safe_value = "".join(c for c in safe_value if c not in [';', '&', '|', '`', '$', '(', ')', '<', '>', '"', "'"])
+                safe_value = "".join(
+                    c for c in safe_value if c not in [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'"]
+                )
 
             safe_options[safe_key] = safe_value
 
@@ -336,22 +369,25 @@ class HandBrakeService:
         except Exception:
             # If we can't check disk space, continue anyway
             pass
-    
+
     async def _run_transcode_job(self, job: TranscodeJob):
         """Run a transcoding job in the background."""
         try:
             job.status = "processing"
-            
+
             # Prepare output directory
             job.output_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Build HandBrakeCLI command with security measures
             cmd = [
                 str(self.handbrake_path),
-                "--input", str(job.input_path),
-                "--output", str(job.output_path),
+                "--input",
+                str(job.input_path),
+                "--output",
+                str(job.output_path),
                 "--preset-import-gui",
-                "--preset", job.preset,
+                "--preset",
+                job.preset,
                 "--json",
             ]
 
@@ -361,22 +397,22 @@ class HandBrakeService:
                     cmd.append(f"--{key}")
                 elif value is not False and value is not None:
                     cmd.extend([f"--{key}", str(value)])
-            
+
             # Start the process
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            
+
             job.process = process
-            
+
             # Process output
             while True:
                 line = await process.stdout.readline()
                 if not line:
                     break
-                
+
                 try:
                     # Parse progress from JSON output
                     data = json.loads(line)
@@ -384,10 +420,10 @@ class HandBrakeService:
                         job.progress = float(data["Progress"])
                 except json.JSONDecodeError:
                     logger.debug(f"Non-JSON output: {line.decode().strip()}")
-            
+
             # Wait for process to complete
             await process.wait()
-            
+
             if process.returncode == 0:
                 job.status = "completed"
                 job.progress = 100.0
@@ -397,53 +433,54 @@ class HandBrakeService:
                 job.status = "failed"
                 job.error = f"HandBrakeCLI failed with code {process.returncode}: {error_output.decode()}"
                 logger.error(f"Transcoding failed: {job.job_id} - {job.error}")
-        
+
         except Exception as e:
             job.status = "failed"
             job.error = str(e)
             logger.exception(f"Error in transcode job {job.job_id}")
-    
-    async def get_job_status(self, job_id: str) -> Optional[TranscodeJob]:
+
+    async def get_job_status(self, job_id: str) -> TranscodeJob | None:
         """Get the status of a transcoding job."""
         return self.jobs.get(job_id)
-    
+
     async def cancel_job(self, job_id: str) -> bool:
         """Cancel a running transcoding job."""
         job = self.jobs.get(job_id)
         if not job or not job.process:
             return False
-        
+
         try:
             job.process.terminate()
             await asyncio.wait_for(job.process.wait(), timeout=5.0)
-        except (ProcessLookupError, asyncio.TimeoutError):
+        except (TimeoutError, ProcessLookupError):
             job.process.kill()
             await job.process.wait()
-        
+
         job.status = "cancelled"
         return True
-    
-    async def _run_handbrake(self, args: List[str]) -> str:
+
+    async def _run_handbrake(self, args: list[str]) -> str:
         """Run HandBrakeCLI with the given arguments."""
-        cmd = [str(self.handbrake_path)] + args
-        
+        cmd = [str(self.handbrake_path), *args]
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode != 0:
             error_msg = stderr.decode().strip() or "Unknown error"
             raise HandBrakeError(f"HandBrakeCLI failed: {error_msg}")
-        
+
         return stdout.decode().strip()
 
 
 # Global instance - lazy initialization
 handbrake_service = None
+
 
 def get_handbrake_service():
     """Get the HandBrake service instance, initializing it if necessary."""

@@ -5,6 +5,7 @@ This module contains system status and monitoring tools:
 """
 
 from handbrake_mcp.core.config import settings
+
 from .help_tools import get_tool_categories
 from .utility_tools import get_all_tool_documentation
 
@@ -12,10 +13,12 @@ from .utility_tools import get_all_tool_documentation
 # This will be set by the registration system
 _mcp_instance = None
 
+
 def set_mcp_instance(mcp_instance):
     """Set the MCP instance for decorator-based tool registration."""
     global _mcp_instance
     _mcp_instance = mcp_instance
+
 
 def _get_mcp_instance():
     """Get the MCP instance, raising an error if not set."""
@@ -23,16 +26,21 @@ def _get_mcp_instance():
         raise RuntimeError("MCP instance not set. Call set_mcp_instance() first.")
     return _mcp_instance
 
+
 # Store tools to be registered later
 _pending_tools = []
 
+
 def tool(*args, **kwargs):
     """Decorator to register a tool with the MCP instance."""
+
     def decorator(func):
         # Store the tool info for later registration
         _pending_tools.append((func, args, kwargs))
         return func
+
     return decorator
+
 
 def register_pending_tools():
     """Register all pending tools with the MCP instance."""
@@ -47,7 +55,7 @@ def register_pending_tools():
 @tool(
     name="system_status",
     description="Get comprehensive system status including tools, configuration, and resources",
-    tags={"status", "system", "monitoring", "health"}
+    tags={"status", "system", "monitoring", "health"},
 )
 def get_system_status() -> str:
     """
@@ -167,6 +175,7 @@ def get_system_status() -> str:
     # Resources
     lines.append("💾 RESOURCES:")
     import psutil
+
     lines.append(f"  - CPU Usage: {psutil.cpu_percent()}%")
     lines.append(f"  - Memory Usage: {psutil.virtual_memory().percent}%")
     lines.append(f"  - Disk Usage: {psutil.disk_usage('/').percent}%")

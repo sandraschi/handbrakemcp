@@ -27,15 +27,11 @@ class Settings(BaseSettings):
     watch_folders: list[Path] = Field(default_factory=list)
     processed_folder: Path | None = None
     delete_original_after_processing: bool = False
-    file_patterns: list[str] = Field(
-        default_factory=lambda: ["*.mp4", "*.mkv", "*.avi", "*.mov", "*.m4v"]
-    )
+    file_patterns: list[str] = Field(default_factory=lambda: ["*.mp4", "*.mkv", "*.avi", "*.mov", "*.m4v"])
 
     # Notification configuration
     webhook_url: str | None = None
-    webhook_events: list[str] = Field(
-        default_factory=lambda: ["job_started", "job_completed", "job_failed"]
-    )
+    webhook_events: list[str] = Field(default_factory=lambda: ["job_started", "job_completed", "job_failed"])
     email_notifications: bool = False
     email_recipients: list[str] = Field(default_factory=list)
     email_sender: str | None = None

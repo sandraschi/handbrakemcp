@@ -5,15 +5,13 @@ used by other tool modules in the HandBrake MCP server.
 """
 
 import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Callable, Any, Type
-from functools import wraps
-from inspect import signature, Parameter
+from collections.abc import Callable
 from dataclasses import dataclass
+from functools import wraps
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from handbrake_mcp.services.handbrake import get_handbrake_service, TranscodeJob
 from handbrake_mcp.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -26,13 +24,13 @@ class ToolDocumentation:
     name: str
     description: str
     summary: str
-    parameters: Dict[str, Dict[str, Any]]
-    examples: List[Dict[str, Any]]
-    returns: Dict[str, Any]
-    notes: List[str]
-    warnings: List[str]
-    related_tools: List[str]
-    categories: List[str]
+    parameters: dict[str, dict[str, Any]]
+    examples: list[dict[str, Any]]
+    returns: dict[str, Any]
+    notes: list[str]
+    warnings: list[str]
+    related_tools: list[str]
+    categories: list[str]
     version: str = "1.0.0"
 
     def get_multiline_description(self) -> str:
@@ -51,11 +49,11 @@ class ToolDocumentation:
             lines.append("PARAMETERS:")
             for param_name, param_info in self.parameters.items():
                 lines.append(f"  - {param_name}: {param_info.get('description', 'No description')}")
-                if 'type' in param_info:
+                if "type" in param_info:
                     lines.append(f"    Type: {param_info['type']}")
-                if 'default' in param_info:
+                if "default" in param_info:
                     lines.append(f"    Default: {param_info['default']}")
-                if 'required' in param_info:
+                if "required" in param_info:
                     lines.append(f"    Required: {param_info['required']}")
                 lines.append("")
 
@@ -63,14 +61,14 @@ class ToolDocumentation:
             lines.append("EXAMPLES:")
             for i, example in enumerate(self.examples, 1):
                 lines.append(f"  {i}. {example.get('description', 'Example')}")
-                if 'code' in example:
+                if "code" in example:
                     lines.append(f"     {example['code']}")
                 lines.append("")
 
         if self.returns:
             lines.append("RETURNS:")
             lines.append(f"  {self.returns.get('description', 'No return description')}")
-            if 'type' in self.returns:
+            if "type" in self.returns:
                 lines.append(f"  Type: {self.returns['type']}")
             lines.append("")
 
@@ -97,7 +95,7 @@ class ToolDocumentation:
 
     def get_basic_description(self) -> str:
         """Get a basic single-line description."""
-        return self.summary or self.description.split('.')[0] + '.'
+        return self.summary or self.description.split(".")[0] + "."
 
     def get_detailed_description(self) -> str:
         """Get a detailed but concise description."""
@@ -108,14 +106,14 @@ def tool_documentation(
     name: str,
     description: str = "",
     summary: str = "",
-    parameters: Optional[Dict[str, Dict[str, Any]]] = None,
-    examples: Optional[List[Dict[str, Any]]] = None,
-    returns: Optional[Dict[str, Any]] = None,
-    notes: Optional[List[str]] = None,
-    warnings: Optional[List[str]] = None,
-    related_tools: Optional[List[str]] = None,
-    categories: Optional[List[str]] = None,
-    version: str = "1.0.0"
+    parameters: dict[str, dict[str, Any]] | None = None,
+    examples: list[dict[str, Any]] | None = None,
+    returns: dict[str, Any] | None = None,
+    notes: list[str] | None = None,
+    warnings: list[str] | None = None,
+    related_tools: list[str] | None = None,
+    categories: list[str] | None = None,
+    version: str = "1.0.0",
 ):
     """
     Decorator for comprehensive tool documentation.
@@ -136,6 +134,7 @@ def tool_documentation(
     Returns:
         Decorated function with comprehensive documentation
     """
+
     def decorator(func: Callable) -> Callable:
         # Create documentation object
         doc = ToolDocumentation(
@@ -149,7 +148,7 @@ def tool_documentation(
             warnings=warnings or [],
             related_tools=related_tools or [],
             categories=categories or [],
-            version=version
+            version=version,
         )
 
         # Store documentation on the function
@@ -160,120 +159,124 @@ def tool_documentation(
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
-def get_all_tool_documentation() -> Dict[str, ToolDocumentation]:
+def get_all_tool_documentation() -> dict[str, ToolDocumentation]:
     """Get documentation for all registered tools."""
     # This will be populated when tools are registered
-    return getattr(get_all_tool_documentation, '_docs', {})
+    return getattr(get_all_tool_documentation, "_docs", {})
 
 
 # Tool registration is now handled via @mcp.tool() decorators
 # This function is deprecated and kept for backward compatibility
 
-    # Tools registered successfully - MCP protocol handles this silently
+# Tools registered successfully - MCP protocol handles this silently
 
 
 class TranscodeRequest(BaseModel):
     """Request model for the transcode_video tool with FastMCP 2.12 compliant schema."""
+
     input_path: str = Field(
         ...,
         description="Absolute or relative path to the input video file. Supports common formats: MP4, MKV, AVI, MOV, M4V, etc.",
         min_length=1,
         max_length=1000,
-        examples=["/videos/input.mp4", "C:\\videos\\input.mkv", "./movie.avi"]
+        examples=["/videos/input.mp4", "C:\\videos\\input.mkv", "./movie.avi"],
     )
     output_path: str = Field(
         ...,
         description="Absolute or relative path where the transcoded file will be saved. Format determined by file extension.",
         min_length=1,
         max_length=1000,
-        examples=["/videos/output.mkv", "C:\\videos\\output.mp4", "./encoded_video.webm"]
+        examples=["/videos/output.mkv", "C:\\videos\\output.mp4", "./encoded_video.webm"],
     )
-    preset: Optional[str] = Field(
+    preset: str | None = Field(
         settings.default_preset,
         description=f"HandBrake preset name for encoding. If not provided, uses '{settings.default_preset}'",
         min_length=1,
         max_length=100,
-        examples=["Fast 1080p30", "HQ 1080p30", "Very Fast 1080p30", "Apple 1080p30 Surround"]
+        examples=["Fast 1080p30", "HQ 1080p30", "Very Fast 1080p30", "Apple 1080p30 Surround"],
     )
-    options: Optional[Dict[str, str]] = Field(
+    options: dict[str, str] | None = Field(
         default_factory=dict,
         description="Additional HandBrake CLI options as key-value pairs",
-        examples=[{"quality": "20", "encoder": "x264", "audio": "copy"}]
+        examples=[{"quality": "20", "encoder": "x264", "audio": "copy"}],
     )
 
 
 class TranscodeResponse(BaseModel):
     """Response model for the transcode_video tool with FastMCP 2.12 compliant schema."""
+
     job_id: str = Field(
         ...,
         description="Unique identifier for tracking the transcode job",
         min_length=1,
         max_length=100,
-        examples=["job_12345", "batch_001_001", "transcode_2025_01_22_143022"]
+        examples=["job_12345", "batch_001_001", "transcode_2025_01_22_143022"],
     )
     status: str = Field(
         ...,
         description="Current status of the transcode job",
         pattern="^(queued|processing|completed|failed|cancelled)$",
-        examples=["queued", "processing", "completed", "failed"]
+        examples=["queued", "processing", "completed", "failed"],
     )
     input_path: str = Field(
         ...,
         description="Path to the input video file",
         min_length=1,
         max_length=1000,
-        examples=["/videos/input.mp4", "C:\\videos\\input.mkv"]
+        examples=["/videos/input.mp4", "C:\\videos\\input.mkv"],
     )
     output_path: str = Field(
         ...,
         description="Path where the output file will be saved",
         min_length=1,
         max_length=1000,
-        examples=["/videos/output.mkv", "C:\\videos\\output.mp4"]
+        examples=["/videos/output.mkv", "C:\\videos\\output.mp4"],
     )
 
 
 class JobStatusResponse(BaseModel):
     """Response model for job status with FastMCP 2.12 compliant schema."""
+
     job_id: str = Field(
         ...,
         description="Unique identifier of the transcode job",
         min_length=1,
         max_length=100,
-        examples=["job_12345", "batch_001_001"]
+        examples=["job_12345", "batch_001_001"],
     )
     status: str = Field(
         ...,
         description="Current status of the transcode job",
         pattern="^(queued|processing|completed|failed|cancelled|not_found)$",
-        examples=["queued", "processing", "completed", "failed"]
+        examples=["queued", "processing", "completed", "failed"],
     )
     progress: float = Field(
         ...,
         description="Progress percentage of the transcode job",
         ge=0.0,
         le=100.0,
-        examples=[0.0, 25.5, 50.0, 75.2, 100.0]
+        examples=[0.0, 25.5, 50.0, 75.2, 100.0],
     )
-    error: Optional[str] = Field(
+    error: str | None = Field(
         None,
         description="Error message if the job failed",
-        examples=["HandBrake CLI not found", "Input file not found", "Encoding failed"]
+        examples=["HandBrake CLI not found", "Input file not found", "Encoding failed"],
     )
     input_path: str = Field(
         ...,
         description="Path to the input video file",
         min_length=1,
         max_length=1000,
-        examples=["/videos/input.mp4", "C:\\videos\\input.mkv"]
+        examples=["/videos/input.mp4", "C:\\videos\\input.mkv"],
     )
     output_path: str = Field(
         ...,
         description="Path where the output file will be saved",
         min_length=1,
         max_length=1000,
-        examples=["/videos/output.mkv", "C:\\videos\\output.mp4"]
+        examples=["/videos/output.mkv", "C:\\videos\\output.mp4"],
     )

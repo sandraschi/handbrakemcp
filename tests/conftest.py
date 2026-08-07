@@ -1,18 +1,14 @@
 """Pytest configuration for HandBrake MCP tests."""
-import pytest
+
 import subprocess
-from pathlib import Path
+
+import pytest
 
 
 def is_handbrake_available():
     """Check if HandBrakeCLI is available on the system."""
     try:
-        result = subprocess.run(
-            ["HandBrakeCLI", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        result = subprocess.run(["HandBrakeCLI", "--version"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return False
@@ -36,4 +32,3 @@ def skip_if_no_handbrake(handbrake_available):
     """Skip test if HandBrake is not available."""
     if not handbrake_available:
         pytest.skip("HandBrakeCLI not available")
-

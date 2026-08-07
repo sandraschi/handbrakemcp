@@ -1,16 +1,10 @@
 """Stdio entry point for HandBrake MCP server."""
-import asyncio
+
 import logging
-import sys
-from pathlib import Path
-from typing import List, Optional
 
 from fastmcp import FastMCP
 
 from handbrake_mcp.core.config import settings
-from handbrake_mcp.services.notification_service import notification_service
-from handbrake_mcp.services.processing_service import processing_service
-from handbrake_mcp.services.watch_service import watch_service
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +23,8 @@ mcp = FastMCP(
 import handbrake_mcp.tools.handbrake_tools
 import handbrake_mcp.tools.help_tools
 import handbrake_mcp.tools.status_tools
-from .transport import run_server, run_server_async
+
+from .transport import run_server
 
 # Set MCP instance for decorator-based tool registration
 handbrake_mcp.tools.handbrake_tools.set_mcp_instance(mcp)
@@ -40,6 +35,7 @@ handbrake_mcp.tools.status_tools.set_mcp_instance(mcp)
 handbrake_mcp.tools.handbrake_tools.register_pending_tools()
 handbrake_mcp.tools.help_tools.register_pending_tools()
 handbrake_mcp.tools.status_tools.register_pending_tools()
+
 
 def main():
     """Main stdio server function."""
@@ -54,6 +50,7 @@ def main():
 
     # Run the MCP server in stdio mode
     run_server(mcp, server_name="handbrake-mcp")
+
 
 if __name__ == "__main__":
     # For stdio MCP servers, run main() synchronously

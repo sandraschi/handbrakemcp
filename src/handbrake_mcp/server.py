@@ -5,24 +5,25 @@ Standardized FastMCP 3.1.0+ compliant server for video transcoding.
 Provides dual-mode support (stdio/HTTP) and modular tool registration.
 """
 
-import subprocess
 import argparse
 import logging
 import os
+import subprocess
 import sys
-import psutil
 from contextlib import asynccontextmanager
 
-from fastmcp import FastMCP, Context
-from fastmcp.server import create_proxy
+import psutil
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastmcp import FastMCP
+from fastmcp.server import create_proxy
+
+import handbrake_mcp.tools.agentic_workflow
 
 # Import tools for registration
 import handbrake_mcp.tools.handbrake_tools
 import handbrake_mcp.tools.help_tools
 import handbrake_mcp.tools.status_tools
-import handbrake_mcp.tools.agentic_workflow
 from handbrake_mcp.core.config import settings
 from handbrake_mcp.services.notification_service import notification_service
 from handbrake_mcp.services.processing_service import processing_service
@@ -35,6 +36,7 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 logger = logging.getLogger(__name__)
+
 
 async def process_new_file(file_path):
     """Callback for file watch service."""
@@ -67,9 +69,7 @@ async def lifespan(mcp_instance: FastMCP):
     if settings.watch_folders:
         logger.info(f"Starting watch service for: {settings.watch_folders}")
         try:
-            await watch_service.start(
-                callback=process_new_file, watch_dirs=settings.watch_folders
-            )
+            await watch_service.start(callback=process_new_file, watch_dirs=settings.watch_folders)
         except Exception as e:
             logger.error(f"Failed to start watch service: {e}")
 
@@ -118,7 +118,7 @@ if bridge_urls:
 app = FastAPI(
     title="HandBrake MCP SOTA Bridge",
     description="Universal media ingestion engine with Agentic Workflows",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 _tauri = os.environ.get("HANDBRAKE_TAURI", "").lower() in ("1", "true", "yes")
@@ -152,6 +152,7 @@ handbrake_mcp.tools.status_tools.register_pending_tools()
 # SOTA 3.2 FEATURES: SAMPLING & PROMPTS
 # =============================================================================
 
+
 @mcp.prompt()
 def advanced_transcoding_guide():
     """Returns a SOTA guide for hardware-accelerated transcoding constants."""
@@ -165,62 +166,54 @@ def advanced_transcoding_guide():
 3. **Containers**: Always use `MKV` for preservation, `MP4` for web compatibility.
 """
 
+
 # =============================================================================
 # MANDATORY CAPABILITY INTROSPECTION (SOTA 2026)
 # =============================================================================
+
 
 @app.get("/api/capabilities")
 async def get_capabilities():
     """Runtime source of truth for HandBrake MCP capabilities."""
     from datetime import datetime
-    
+
     # Introspect registered tools
     # FastMCP 3.2+ uses async methods for listing
     tools = await mcp.list_tools()
     prompts = await mcp.list_prompts()
-    
+
     return {
         "status": "ok",
-        "server": { 
-            "name": "handbrake-mcp", 
-            "version": "1.0.0", 
-            "fastmcp": "3.2.0" 
-        },
+        "server": {"name": "handbrake-mcp", "version": "1.0.0", "fastmcp": "3.2.0"},
         "tool_surface": {
             "total": len(tools),
             "portmanteau_count": 3,
             "atomic_count": 0,
             "portmanteau_tools": ["handbrake_ops", "status_ops", "help_ops"],
-            "atomic_tools": []
+            "atomic_tools": [],
         },
-        "features": {
-            "sampling": True,
-            "agentic_workflows": True,
-            "prompts": True,
-            "resources": False,
-            "skills": True
-        },
+        "features": {"sampling": True, "agentic_workflows": True, "prompts": True, "resources": False, "skills": True},
         "inventory": {
             "workflow_tools": ["handbrake_agentic_workflow"],
             "prompt_names": [p.name for p in prompts],
             "resource_uris": [],
-            "skill_uris": ["skill://handbrake-expert/SKILL.md"]
+            "skill_uris": ["skill://handbrake-expert/SKILL.md"],
         },
-        "runtime": {
-            "transport": "dual",
-            "surface_mode": "portmanteau"
-        },
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "runtime": {"transport": "dual", "surface_mode": "portmanteau"},
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
+
 
 # =============================================================================
 # CUSTOM HTTP ROUTES (FastAPI)
 # =============================================================================
 
+
 @app.get("/api/v1/diagnostics")
 async def diagnostics():
     """Fleet diagnostics endpoint for CUA-NSIS smoke testing."""
     import platform
+
     tools = await mcp.list_tools()
     return {
         "status": "ok",
@@ -233,6 +226,7 @@ async def diagnostics():
         "errors": [],
     }
 
+
 @app.get("/health")
 async def health():
     """System health endpoint for the SOTA dashboard."""
@@ -244,19 +238,19 @@ async def health():
     gpu_temp = "N/A"
     gpu_util = "N/A"
     gpu_model = "Not Detected"
-    
+
     try:
         # Run nvidia-smi to get temp and utilization
         # Using -L first to check if GPU exists to avoid errors on non-NVIDIA systems
         res_list = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False)
         if res_list.returncode == 0:
             gpu_model = res_list.stdout.strip().split("\n")[0]
-            
+
             res = subprocess.run(
                 ["nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
             if res.returncode == 0:
                 parts = res.stdout.strip().split(",")
@@ -273,21 +267,16 @@ async def health():
         "tool_count": len(tools),
         "system": {
             "cpu_percent": cpu_percent,
-            "memory": {
-                "percent": memory.percent,
-                "available_gb": round(memory.available / (1024**3), 2)
-            },
-            "gpu": {
-                "temp_c": gpu_temp,
-                "utilization_percent": gpu_util,
-                "model": gpu_model
-            }
-        }
+            "memory": {"percent": memory.percent, "available_gb": round(memory.available / (1024**3), 2)},
+            "gpu": {"temp_c": gpu_temp, "utilization_percent": gpu_util, "model": gpu_model},
+        },
     }
+
 
 # =============================================================================
 # INDUSTRIAL CONTROL API (SOTA 2026)
 # =============================================================================
+
 
 @app.get("/api/tools")
 async def list_tools():
@@ -297,24 +286,21 @@ async def list_tools():
     for t in tools:
         try:
             mcp_tool = t.to_mcp_tool()
-            tool_list.append({
-                "name": mcp_tool.name,
-                "description": mcp_tool.description,
-                "inputSchema": mcp_tool.inputSchema
-            })
+            tool_list.append(
+                {"name": mcp_tool.name, "description": mcp_tool.description, "inputSchema": mcp_tool.inputSchema}
+            )
         except Exception as e:
             logger.error(f"Failed to map tool {t.name}: {e}")
-            
-    return {
-        "status": "ok",
-        "tools": tool_list
-    }
+
+    return {"status": "ok", "tools": tool_list}
+
 
 @app.get("/api/presets")
 async def get_presets():
     """Fetch live HandBrake presets from the system CLI."""
     try:
         from handbrake_mcp.services.handbrake import get_handbrake_service
+
         hb = get_handbrake_service()
         presets = await hb.get_presets()
         return {"status": "ok", "presets": presets}
@@ -322,57 +308,65 @@ async def get_presets():
         logger.error(f"Failed to fetch presets: {e}")
         return {"status": "error", "message": str(e), "presets": ["Fast 1080p30", "HQ 1080p30 Surround"]}
 
+
 @app.get("/api/jobs")
 async def list_jobs():
     """Return the status of all current transcoding jobs."""
     try:
         from handbrake_mcp.services.handbrake import get_handbrake_service
+
         hb = get_handbrake_service()
         job_list = []
-        for job_id, job in hb.jobs.items():
-            job_list.append({
-                "job_id": job.job_id,
-                "input": str(job.input_path),
-                "output": str(job.output_path),
-                "preset": job.preset,
-                "status": job.status,
-                "progress": job.progress,
-                "error": job.error
-            })
+        for _job_id, job in hb.jobs.items():
+            job_list.append(
+                {
+                    "job_id": job.job_id,
+                    "input": str(job.input_path),
+                    "output": str(job.output_path),
+                    "preset": job.preset,
+                    "status": job.status,
+                    "progress": job.progress,
+                    "error": job.error,
+                }
+            )
         return {"status": "ok", "jobs": job_list}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 @app.post("/api/transcode")
 async def start_transcode(data: dict):
     """Trigger a transcoding job directly from the dashboard."""
     try:
         from handbrake_mcp.services.handbrake import get_handbrake_service
+
         hb = get_handbrake_service()
-        
+
         input_path = data.get("input")
         output_path = data.get("output")
         preset = data.get("preset", settings.default_preset)
-        
+
         if not input_path:
             return {"status": "error", "message": "Input path is required"}
-            
+
         # Default output path if not provided
         if not output_path:
             p = Path(input_path)
             output_path = str(p.with_suffix(".mkv"))
-            
+
         job_id = await hb.transcode(input_path, output_path, preset)
         return {"status": "ok", "job_id": job_id, "message": "Job queued successfully"}
     except Exception as e:
         logger.error(f"Transcode trigger failed: {e}")
         return {"status": "error", "message": str(e)}
 
+
 # Mount the MCP app to the FastAPI instance
 # FastMCP 3.2 provides http_app() for this purpose
 # This returns a Starlette app that we mount as a sub-app
 mcp_app = mcp.http_app(path="/")
 app.mount("/mcp", mcp_app)
+
 
 def run():
     """SOTA-compliant entry point with CLI argument support."""
@@ -387,7 +381,7 @@ def run():
     parser.add_argument("--host", type=str, default=env_host, help="Host for HTTP mode")
     parser.add_argument("--port", type=int, default=int(env_port) if env_port else 10875, help="Port for HTTP mode")
     parser.add_argument("--log-level", type=str, default="info", help="Log level")
-    args, unknown = parser.parse_known_args()
+    args, _unknown = parser.parse_known_args()
 
     if args.http:
         logger.info(f"Starting HandBrake MCP Bridge on http://{args.host}:{args.port}")
@@ -402,4 +396,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-

@@ -9,18 +9,18 @@ This module contains all help, documentation, and tool discovery tools:
 - search_tools: Keyword-based tool discovery
 """
 
-from typing import Dict, List, Optional
-
 from .utility_tools import get_all_tool_documentation
 
 # Import MCP instance for decorator registration
 # This will be set by the registration system
 _mcp_instance = None
 
+
 def set_mcp_instance(mcp_instance):
     """Set the MCP instance for decorator-based tool registration."""
     global _mcp_instance
     _mcp_instance = mcp_instance
+
 
 def _get_mcp_instance():
     """Get the MCP instance, raising an error if not set."""
@@ -28,16 +28,21 @@ def _get_mcp_instance():
         raise RuntimeError("MCP instance not set. Call set_mcp_instance() first.")
     return _mcp_instance
 
+
 # Store tools to be registered later
 _pending_tools = []
 
+
 def tool(*args, **kwargs):
     """Decorator to register a tool with the MCP instance."""
+
     def decorator(func):
         # Store the tool info for later registration
         _pending_tools.append((func, args, kwargs))
         return func
+
     return decorator
+
 
 def register_pending_tools():
     """Register all pending tools with the MCP instance."""
@@ -52,7 +57,7 @@ def register_pending_tools():
 @tool(
     name="help",
     description="Get comprehensive help for tools at different detail levels",
-    tags={"help", "documentation", "information"}
+    tags={"help", "documentation", "information"},
 )
 def get_tool_help(tool_name: str, level: str = "basic") -> str:
     """
@@ -141,9 +146,9 @@ def get_tool_help(tool_name: str, level: str = "basic") -> str:
 @tool(
     name="tool_categories",
     description="Get all tools organized by category",
-    tags={"help", "documentation", "categories", "organization"}
+    tags={"help", "documentation", "categories", "organization"},
 )
-def get_tool_categories() -> Dict[str, List[str]]:
+def get_tool_categories() -> dict[str, list[str]]:
     """
     Get all tools organized by category with programmatic access to category structure.
 
@@ -217,7 +222,7 @@ def get_tool_categories() -> Dict[str, List[str]]:
     return categories
 
 
-def get_tools_by_category(category: str) -> List[str]:
+def get_tools_by_category(category: str) -> list[str]:
     """
     Get all tools belonging to a specific category with filtering capability.
 
@@ -291,9 +296,9 @@ def get_tools_by_category(category: str) -> List[str]:
 @tool(
     name="search_tools",
     description="Search tools by name, description, or category",
-    tags={"help", "documentation", "search", "discovery"}
+    tags={"help", "documentation", "search", "discovery"},
 )
-def search_tools(query: str) -> List[str]:
+def search_tools(query: str) -> list[str]:
     """
     Search tools by name, description, or category using keyword matching.
 
@@ -374,10 +379,12 @@ def search_tools(query: str) -> List[str]:
 
     results = []
     for tool_name, doc in docs.items():
-        if (query_lower in tool_name.lower() or
-            query_lower in doc.summary.lower() or
-            query_lower in doc.description.lower() or
-            any(query_lower in category.lower() for category in doc.categories)):
+        if (
+            query_lower in tool_name.lower()
+            or query_lower in doc.summary.lower()
+            or query_lower in doc.description.lower()
+            or any(query_lower in category.lower() for category in doc.categories)
+        ):
             results.append(tool_name)
 
     return results
@@ -386,9 +393,9 @@ def search_tools(query: str) -> List[str]:
 @tool(
     name="multilevel_help",
     description="Get help at different levels: basic, detailed, full, categories",
-    tags={"help", "documentation", "information", "categories"}
+    tags={"help", "documentation", "information", "categories"},
 )
-def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -> str:
+def get_multilevel_help(level: str = "basic", filter_by: str | None = None) -> str:
     """
     Get comprehensive help at different detail levels across all tools and system functions.
 
@@ -551,9 +558,9 @@ def get_multilevel_help(level: str = "basic", filter_by: Optional[str] = None) -
 @tool(
     name="advanced_help",
     description="Get advanced help: overview, examples, troubleshooting, performance",
-    tags={"help", "documentation", "advanced", "troubleshooting"}
+    tags={"help", "documentation", "advanced", "troubleshooting"},
 )
-def get_advanced_help(tool_name: Optional[str] = None, help_type: str = "overview") -> str:
+def get_advanced_help(tool_name: str | None = None, help_type: str = "overview") -> str:
     """
     Get advanced help information for tools and system with specialized content and guidance.
 

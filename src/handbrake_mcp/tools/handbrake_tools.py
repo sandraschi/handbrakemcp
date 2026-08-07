@@ -11,13 +11,12 @@ This module contains all the core HandBrake video processing tools:
 """
 
 import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 import os
+from pathlib import Path
 
-from handbrake_mcp.services.handbrake import get_handbrake_service
 from handbrake_mcp.core.config import settings
-from handbrake_mcp.tools.utility_tools import TranscodeResponse, JobStatusResponse
+from handbrake_mcp.services.handbrake import get_handbrake_service
+from handbrake_mcp.tools.utility_tools import JobStatusResponse, TranscodeResponse
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +24,12 @@ logger = logging.getLogger(__name__)
 # This will be set by the registration system
 _mcp_instance = None
 
+
 def set_mcp_instance(mcp_instance):
     """Set the MCP instance for decorator-based tool registration."""
     global _mcp_instance
     _mcp_instance = mcp_instance
+
 
 def _get_mcp_instance():
     """Get the MCP instance, raising an error if not set."""
@@ -36,16 +37,21 @@ def _get_mcp_instance():
         raise RuntimeError("MCP instance not set. Call set_mcp_instance() first.")
     return _mcp_instance
 
+
 # Store tools to be registered later
 _pending_tools = []
 
+
 def tool(*args, **kwargs):
     """Decorator to register a tool with the MCP instance."""
+
     def decorator(func):
         # Store the tool info for later registration
         _pending_tools.append((func, args, kwargs))
         return func
+
     return decorator
+
 
 def register_pending_tools():
     """Register all pending tools with the MCP instance."""
@@ -60,13 +66,13 @@ def register_pending_tools():
 @tool(
     name="transcode_video",
     description="Transcode a single video file using HandBrake with professional quality settings",
-    tags={"video", "transcoding", "handbrake", "media", "encoding"}
+    tags={"video", "transcoding", "handbrake", "media", "encoding"},
 )
 async def transcode_video(
     input_path: str,
     output_path: str,
-    preset: Optional[str] = None,
-    options: Optional[Dict[str, str]] = None,
+    preset: str | None = None,
+    options: dict[str, str] | None = None,
 ) -> TranscodeResponse:
     """
     Transcode a single video file using HandBrake with professional quality settings.
@@ -181,15 +187,16 @@ async def transcode_video(
         output_path=output_path,
     )
 
+
 @tool(
     name="batch_transcode",
     description="Transcode multiple video files in efficient batch processing mode with parallel execution",
-    tags={"video", "transcoding", "batch", "bulk", "parallel", "handbrake"}
+    tags={"video", "transcoding", "batch", "bulk", "parallel", "handbrake"},
 )
 async def batch_transcode(
-    jobs: List[Dict[str, str]],
-    default_preset: Optional[str] = None,
-) -> List[TranscodeResponse]:
+    jobs: list[dict[str, str]],
+    default_preset: str | None = None,
+) -> list[TranscodeResponse]:
     """
     Transcode multiple video files in efficient batch processing mode with parallel execution.
 
@@ -302,20 +309,24 @@ async def batch_transcode(
                 preset=job.get("preset", default_preset or settings.default_preset),
                 options=job.get("options", {}),
             )
-            results.append(TranscodeResponse(
-                job_id=job_id,
-                status="queued",
-                input_path=job["input_path"],
-                output_path=job["output_path"],
-            ))
+            results.append(
+                TranscodeResponse(
+                    job_id=job_id,
+                    status="queued",
+                    input_path=job["input_path"],
+                    output_path=job["output_path"],
+                )
+            )
         except Exception as e:
-            results.append(TranscodeResponse(
-                job_id=f"error_{len(results)}",
-                status="failed",
-                input_path=job.get("input_path", ""),
-                output_path=job.get("output_path", ""),
-                error=str(e),
-            ))
+            results.append(
+                TranscodeResponse(
+                    job_id=f"error_{len(results)}",
+                    status="failed",
+                    input_path=job.get("input_path", ""),
+                    output_path=job.get("output_path", ""),
+                    error=str(e),
+                )
+            )
 
     return results
 
@@ -323,7 +334,7 @@ async def batch_transcode(
 @tool(
     name="get_job_status",
     description="Get comprehensive real-time status and progress information for video transcode jobs",
-    tags={"status", "monitoring", "jobs", "progress", "tracking", "handbrake"}
+    tags={"status", "monitoring", "jobs", "progress", "tracking", "handbrake"},
 )
 async def get_job_status(job_id: str) -> JobStatusResponse:
     """
@@ -450,7 +461,7 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
 @tool(
     name="cancel_job",
     description="Cancel a running or queued video transcode job with immediate effect and resource cleanup",
-    tags={"control", "jobs", "cancel", "management", "emergency", "handbrake"}
+    tags={"control", "jobs", "cancel", "management", "emergency", "handbrake"},
 )
 async def cancel_job(job_id: str) -> bool:
     """
@@ -551,9 +562,9 @@ async def cancel_job(job_id: str) -> bool:
 @tool(
     name="get_presets",
     description="Get a comprehensive, dynamically updated list of all available HandBrake presets for video encoding",
-    tags={"presets", "configuration", "info", "settings", "discovery", "handbrake"}
+    tags={"presets", "configuration", "info", "settings", "discovery", "handbrake"},
 )
-async def get_presets() -> List[str]:
+async def get_presets() -> list[str]:
     """
     Get a comprehensive, dynamically updated list of all available HandBrake presets for video encoding.
 
@@ -663,9 +674,9 @@ async def get_presets() -> List[str]:
 @tool(
     name="get_loaded_models",
     description="Get list of loaded models (HandBrake presets) - MCP compatibility endpoint",
-    tags={"presets", "models", "compatibility", "mcp", "discovery", "handbrake"}
+    tags={"presets", "models", "compatibility", "mcp", "discovery", "handbrake"},
 )
-async def get_loaded_models() -> List[str]:
+async def get_loaded_models() -> list[str]:
     """
     Get list of loaded models (HandBrake presets) - MCP compatibility endpoint.
 
@@ -784,9 +795,9 @@ async def get_loaded_models() -> List[str]:
 @tool(
     name="get_provider_status",
     description="Get comprehensive real-time status and system information about the HandBrake video processing provider",
-    tags={"status", "system", "monitoring", "health", "diagnostics", "information", "handbrake"}
+    tags={"status", "system", "monitoring", "health", "diagnostics", "information", "handbrake"},
 )
-async def get_provider_status() -> Dict[str, str]:
+async def get_provider_status() -> dict[str, str]:
     """
     Get comprehensive real-time status and system information about the HandBrake video processing provider.
 
@@ -945,6 +956,7 @@ async def get_provider_status() -> Dict[str, str]:
             pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
             if pyproject_path.exists():
                 import tomllib
+
                 with open(pyproject_path, "rb") as f:
                     data = tomllib.load(f)
                     server_version = data.get("project", {}).get("version", "unknown")
