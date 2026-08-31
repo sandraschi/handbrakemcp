@@ -14,30 +14,30 @@ The easiest way to install HandBrake MCP Server is using the DXT package:
 === "Linux"
     ```bash
     # Download the latest release
-    wget https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.dxt
+    wget https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.mcpb
 
     # Install with DXT
-    dxt install handbrake-mcp-{{ version }}.dxt
+    npx @anthropic-ai/mcpb pack handbrake-mcp-{{ version }}.mcpb
     ```
 
 === "macOS"
     ```bash
     # Download the latest release
-    curl -L -o handbrake-mcp-{{ version }}.dxt \
-         https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.dxt
+    curl -L -o handbrake-mcp-{{ version }}.mcpb \
+         https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.mcpb
 
     # Install with DXT
-    dxt install handbrake-mcp-{{ version }}.dxt
+    npx @anthropic-ai/mcpb pack handbrake-mcp-{{ version }}.mcpb
     ```
 
 === "Windows"
     ```powershell
     # Download the latest release
-    Invoke-WebRequest -Uri "https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.dxt" `
-                      -OutFile "handbrake-mcp-{{ version }}.dxt"
+    Invoke-WebRequest -Uri "https://github.com/sandraschi/handbrake-mcp/releases/latest/download/handbrake-mcp-{{ version }}.mcpb" `
+                      -OutFile "handbrake-mcp-{{ version }}.mcpb"
 
     # Install with DXT
-    dxt install handbrake-mcp-{{ version }}.dxt
+    npx @anthropic-ai/mcpb pack handbrake-mcp-{{ version }}.mcpb
     ```
 
 ## Option 2: Manual Installation
@@ -163,4 +163,5 @@ If you encounter issues:
 - Search [existing issues](https://github.com/sandraschi/handbrake-mcp/issues)
 - Start a [discussion](https://github.com/sandraschi/handbrake-mcp/discussions)
 - Create a [new issue](https://github.com/sandraschi/handbrake-mcp/issues/new)
+
 
