@@ -8,6 +8,7 @@ Provides dual-mode support (stdio/HTTP) and modular tool registration.
 """
 
 import argparse
+import asyncio
 import logging
 import os
 import subprocess
@@ -244,11 +245,14 @@ async def health():
     try:
         # Run nvidia-smi to get temp and utilization
         # Using -L first to check if GPU exists to avoid errors on non-NVIDIA systems
-        res_list = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False)
+        res_list = await asyncio.to_thread(
+            subprocess.run, ["nvidia-smi", "-L"], capture_output=True, text=True, check=False
+        )
         if res_list.returncode == 0:
             gpu_model = res_list.stdout.strip().split("\n")[0]
 
-            res = subprocess.run(
+            res = await asyncio.to_thread(
+                subprocess.run,
                 ["nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits"],
                 capture_output=True,
                 text=True,
