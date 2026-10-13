@@ -20,7 +20,10 @@ class Settings(BaseSettings):
 
     # HandBrake configuration
     hbb_path: str = "HandBrakeCLI"
-    winget_hbb_path: str = "C:/Users/sandr/AppData/Local/Microsoft/WinGet/Links/HandBrakeCLI.exe"
+    # winget's per-user links dir for the current user (not the author's profile)
+    winget_hbb_path: str = str(
+        Path.home() / "AppData" / "Local" / "Microsoft" / "WinGet" / "Links" / "HandBrakeCLI.exe"
+    )
     default_preset: str = "Fast 1080p30"
 
     # Watch folder configuration
