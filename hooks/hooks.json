@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "text",
+            "text": "## Session Context (HandBrake MCP)\n\nYou have video transcoding tools via HandBrakeCLI: transcode_video, batch_transcode, job monitoring.\n\n**Before starting work:**\n1. Check provider health: get_provider_status()\n2. List presets for the task: get_presets()\n\n**At end of work:**\n- Report job IDs and final get_job_status() for any transcodes started\n- Note failed jobs with their error strings"
+          }
+        ]
+      }
+    ]
+  }
+}

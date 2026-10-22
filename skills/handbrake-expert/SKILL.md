@@ -1,40 +1,96 @@
-# HandBrake Expert Skill (SOTA 2026)
+---
+name: handbrake-expert
+description: Expert video transcoding with HandBrakeCLI — transcode, batch, monitor, optimize for devices, troubleshoot
+---
 
-This skill provides expert guidance for autonomous and manual video transcoding workflows using the HandBrake MCP server.
+# HandBrake Expert Skill
 
-## CORE CAPABILITIES
+Domain skill for the handbrake-mcp server. Two audiences: **agents** (tool-first
+workflows below) and **humans** (codec guidance at the bottom).
 
-1. **Hardware-Accelerated Transcoding (NVENC)**
-   - Specialized for RTX 4090 architecture.
-   - Use `AV1 NVENC` for the best quality/bitrate ratio in 2026.
-   - Target CRF (Constant Quality): 24-28 (equivalent to x265 slow).
+## Agent routing
 
-2. **Autonomous Optimization**
-   - Use `handbrake_agentic_workflow` for multi-step goals.
-   - Agents should leverage `sampling` to determine optimal bitrates for target devices (e.g. iPad, Vision Pro, Plex).
+- Single file or a defined list → `transcode_video` / `batch_transcode` directly.
+  Do NOT invoke the agentic workflow for something one tool call answers.
+- Vague multi-step goal ("make my library iPad-ready") →
+  `handbrake_agentic_workflow(goal)` for a sampled plan, then execute it.
+- Fleet maintenance, launcher, or packaging questions → repo docs
+  (`docs/`, `INSTALL.md`), not these tools.
 
-3. **Watch Folder Orchestration**
-   - Automated detection and ingestion of raw media files.
-   - Collision detection and parallel processing management.
+## Tool catalog (real names — verified against `mcp.list_tools()`)
 
-## BEST PRACTICES
+| Operation | Signature | Returns |
+|---|---|---|
+| `transcode_video` | `(input_path, output_path, preset?, options?)` | `TranscodeResponse(job_id, status, ...)` |
+| `batch_transcode` | `(jobs[{input_path, output_path, preset?, options?}], default_preset?)` | `list[TranscodeResponse]`, one per job |
+| `get_job_status` | `(job_id)` | `JobStatusResponse(status, progress 0–100, ...)` |
+| `cancel_job` | `(job_id)` | `bool` |
+| `get_presets` / `get_loaded_models` | `()` | `list[str]` preset names |
+| `get_provider_status` / `system_status` / `show_status_card` | `()` | health dict / text / Prefab card |
+| `help` / `multilevel_help` / `advanced_help` / `tool_categories` / `search_tools` | `(...)` | formatted help strings |
+| `handbrake_agentic_workflow` | `(goal)` + sampling ctx | Markdown plan |
+| `handbrake_optimize_library` | `(source_dir, target_device)` + sampling ctx | device strategy |
+| `handbrake_shutdown` | `()` | exits ~500 ms after responding |
 
-### 1. Codec Selection
+## Workflows
+
+### Workflow 1 — transcode and track to completion
+
+```python
+r = await transcode_video("/videos/in.mp4", "/videos/out.mkv", preset="Fast 1080p30")
+# poll every 5–30 s until terminal
+s = await get_job_status(r.job_id)   # queued → processing → completed
+```
+
+### Workflow 2 — batch a folder, then report
+
+```python
+jobs = [{"input_path": str(p), "output_path": str(p.with_suffix(".mkv"))} for p in Path("/watch").glob("*.mp4")]
+results = await batch_transcode(jobs, default_preset="Fast 1080p30")
+failed = [x for x in results if x.status == "failed"]
+for x in results: await get_job_status(x.job_id)   # final states for the report
+```
+
+### Workflow 3 — stuck or unwanted job
+
+```python
+s = await get_job_status("job_12345")
+if s.status in ("queued", "processing"): await cancel_job("job_12345")
+```
+
+## Errors and recovery
+
+- `transcode_video` returns `status="failed"` with `error` (file missing,
+  unwritable output dir, CLI unavailable) — no exception, check the field.
+- `get_job_status` returns `status="not_found"` for expired/unknown ids.
+- Starting encodes while host RAM is over the 85% service gate raises
+  `ValueError` — free memory or wait; do NOT retry in a tight loop.
+- Integration tests skip transcode cases on a loaded host for the same reason
+  (see `tests/test_handbrake.py::skip_if_host_loaded`).
+
+## Configuration
+
+- `HandBrakeCLI` must be on PATH (`winget install HandBrake.HandBrake.CLI`).
+- Server: stdio via `handbrake_mcp.stdio_main`; HTTP bridge
+  `handbrake_mcp.server:app` on 127.0.0.1:10875 (`/health`, `/api/shutdown`).
+- Dashboard (`web_sota/`) on 10874. Canonical entry is `server.py`;
+  `main.py` is the legacy/Docker entry.
+
+## Human guidance — codec selection (RTX 4090 / Goliath)
+
 | Scenario | Codec | Rationale |
-|----------|-------|-----------|
-| **Archival** | x265 (HEVC 10-bit) | Maximum compatibility/efficiency |
-| **Speed** | AV1 NVENC | Peak 4090 performance |
-| **Web/Misc** | x264 | Universal playback |
+|---|---|---|
+| Archival | x265 HEVC 10-bit | efficiency + compatibility |
+| Speed | AV1 NVENC | peak 4090 throughput |
+| Universal playback | x264 | plays everywhere |
 
-### 2. Audio Standards
-- **Downmixing**: Use `AAC (avcodec)` for mobile compatibility.
-- **Pass-through**: Always use `Auto Passthru` for DTS/AC3 if preservation is required.
+- Audio: AAC for mobile, Auto Passthru for DTS/AC3 preservation.
+- Containers: MKV for library preservation, MP4 for web/older hardware.
+- Quality starting point: CRF-equivalent 24–28; verify on your own eyes.
 
-### 3. Container Management
-- Default to **MKV** for library preservation (multi-track support).
-- Use **MP4** for direct web injection and older hardware support.
+## Troubleshooting
 
-## TROUBLESHOOTING
-
-- **Black Screen Dashboard**: Ensure backend is running on port 10875 and `/health` is reachable.
-- **NVENC Failure**: Verify latest NVIDIA drivers are installed and `nvidia-smi` is in the system path.
+- Dashboard unreachable → backend on 10875? `GET /health` 200?
+- NVENC failure → NVIDIA drivers current? `nvidia-smi` on PATH?
+- Empty preset list → CLI missing (fallback list engages) — install HandBrakeCLI.
+- `POST /api/shutdown` is the orderly stop (fleet launcher calls it pre-restart).

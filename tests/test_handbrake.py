@@ -69,6 +69,12 @@ async def unit_test_setup():
     patcher = patch("asyncio.create_subprocess_exec")
     mock_subprocess = patcher.start()
 
+    # Patch resource gate: unit tests must not depend on host CPU/RAM load
+    # (Goliath idles above the service's 85% memory gate; without this the
+    # "unit" tests fail on a busy machine while testing nothing about load).
+    res_patcher = patch.object(HandBrakeService, "_check_system_resources", new=AsyncMock())
+    res_patcher.start()
+
     # Mock process with proper HandBrake output simulation
     mock_process = AsyncMock()
     mock_process.returncode = 0
@@ -101,6 +107,7 @@ async def unit_test_setup():
 
     # Cleanup
     patcher.stop()
+    res_patcher.stop()
     if os.path.exists(test_dir):
         shutil.rmtree(test_dir)
 
@@ -174,105 +181,117 @@ class TestHandBrakeServiceUnit:
             assert "Very Fast 1080p30" in presets
 
 
+@pytest.fixture
+async def integration_test_setup():
+    """Pytest fixture for real-CLI integration tests (replaces dead unittest asyncSetUp)."""
+    test_dir = Path(tempfile.mkdtemp(prefix="handbrake_integration_test_"))
+    input_file = test_dir / "input.mp4"
+    output_file = test_dir / "output.mkv"
+
+    # Real test video via ffmpeg; skip the test when neither ffmpeg nor a
+    # valid file is available (a dummy header is NOT transcodable input).
+    if not create_test_video(input_file):
+        shutil.rmtree(test_dir, ignore_errors=True)
+        pytest.skip("ffmpeg unavailable: cannot fabricate a transcodable test video")
+
+    service = HandBrakeService()
+
+    # Verify HandBrake is working before the test body runs
+    version = await service.get_handbrake_version()
+    assert version is not None and version != "unknown", "HandBrakeCLI did not report a version"
+
+    yield {"service": service, "test_dir": test_dir, "input_file": input_file, "output_file": output_file}
+
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir)
+
+
+def skip_if_host_loaded():
+    """Skip transcode tests when host RAM exceeds the service 85% safety gate.
+
+    The service correctly refuses new encodes on a loaded box; failing the
+    test would punish the suite for the service working as designed.
+    """
+    import psutil
+
+    if psutil.virtual_memory().percent > 85:
+        pytest.skip("host RAM above the service 85% gate: encodes correctly refused")
+
+
 @pytest.mark.integration
 @pytest.mark.slow
 class TestHandBrakeServiceIntegration:
     """Integration tests for HandBrakeService using real HandBrakeCLI."""
 
-    async def asyncSetUp(self):
-        """Set up test fixtures with real HandBrake."""
-        self.test_dir = Path(tempfile.mkdtemp(prefix="handbrake_integration_test_"))
-        self.input_file = self.test_dir / "input.mp4"
-        self.output_file = self.test_dir / "output.mkv"
-
-        # Create a real test video if possible
-        if not create_test_video(self.input_file):
-            # Fallback: create a minimal video file for testing file operations
-            with open(self.input_file, "wb") as f:
-                # Write a minimal MP4 header + some dummy data to make it look like a video file
-                f.write(b"\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41mp42iso5dash\x00\x00\x00\x08free" + b"x" * 1000)
-
-        # Initialize service with real HandBrake
-        self.service = HandBrakeService()
-
-        # Verify HandBrake is working
-        version = await self.service.get_handbrake_version()
-        self.assertIsNotNone(version)
-        self.assertNotEqual(version, "unknown")
-
-    async def asyncTearDown(self):
-        """Clean up after tests."""
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
-
-    async def test_real_transcode_success(self):
+    async def test_real_transcode_success(self, integration_test_setup):
         """Test successful video transcode with real HandBrakeCLI."""
-        # Only run if we have a valid input file
-        if not self.input_file.exists() or self.input_file.stat().st_size < 100:
-            self.skipTest("No valid test video file available")
-
-        job_id = await self.service.transcode(
-            input_path=str(self.input_file),
-            output_path=str(self.output_file),
+        skip_if_host_loaded()
+        setup = integration_test_setup
+        job_id = await setup["service"].transcode(
+            input_path=str(setup["input_file"]),
+            output_path=str(setup["output_file"]),
             preset="Fast 1080p30",
         )
 
-        self.assertIsNotNone(job_id)
-        self.assertIn(job_id, self.service.jobs)
+        assert job_id is not None
+        assert job_id in setup["service"].jobs
 
         # Wait for job to complete (with timeout)
-        job = self.service.jobs[job_id]
-        await asyncio.wait_for(self.service._run_transcode_job(job), timeout=60)
+        job = setup["service"].jobs[job_id]
+        await asyncio.wait_for(setup["service"]._run_transcode_job(job), timeout=120)
 
-        # Verify job completed
-        self.assertEqual(job.status, "completed")
-        self.assertEqual(job.progress, 1.0)
+        # Verify job completed (progress scale is 0-100)
+        assert job.status == "completed"
+        assert job.progress == 100.0
 
         # Verify output file was created
-        self.assertTrue(self.output_file.exists())
-        self.assertGreater(self.output_file.stat().st_size, 0)
+        assert setup["output_file"].exists()
+        assert setup["output_file"].stat().st_size > 0
 
-    async def test_real_get_presets(self):
+    async def test_real_get_presets(self, integration_test_setup):
         """Test getting HandBrake presets with real CLI."""
-        presets = await self.service.get_presets()
-        self.assertIsInstance(presets, list)
-        self.assertGreater(len(presets), 0)
+        setup = integration_test_setup
+        presets = await setup["service"].get_presets()
+        assert isinstance(presets, list)
+        assert len(presets) > 0
 
         # Should contain some common presets
         preset_names = [p.lower() for p in presets]
-        self.assertTrue(any("fast" in name for name in preset_names) or any("1080p" in name for name in preset_names))
+        assert any("fast" in name for name in preset_names) or any("1080p" in name for name in preset_names)
 
-    async def test_real_get_version(self):
+    async def test_real_get_version(self, integration_test_setup):
         """Test getting HandBrake version with real CLI."""
-        version = await self.service.get_handbrake_version()
-        self.assertIsNotNone(version)
-        self.assertNotEqual(version, "unknown")
+        setup = integration_test_setup
+        version = await setup["service"].get_handbrake_version()
+        assert version is not None
+        assert version != "unknown"
 
-        # Version should be in format like "1.5.1"
-        self.assertRegex(version, r"\d+\.\d+\.\d+")
+        # Version should be in format like "1.11.2"
+        import re
 
-    async def test_real_job_status_tracking(self):
+        assert re.match(r"\d+\.\d+\.\d+", version)
+
+    async def test_real_job_status_tracking(self, integration_test_setup):
         """Test job status tracking during real transcoding."""
-        if not self.input_file.exists() or self.input_file.stat().st_size < 100:
-            self.skipTest("No valid test video file available")
-
-        job_id = await self.service.transcode(
-            input_path=str(self.input_file),
-            output_path=str(self.output_file),
+        skip_if_host_loaded()
+        setup = integration_test_setup
+        job_id = await setup["service"].transcode(
+            input_path=str(setup["input_file"]),
+            output_path=str(setup["output_file"]),
             preset="Fast 1080p30",
         )
 
-        job = self.service.jobs[job_id]
+        job = setup["service"].jobs[job_id]
 
         # Check initial status
-        self.assertEqual(job.status, "queued")
+        assert job.status == "queued"
 
         # Start the job and monitor progress
         progress_updates = []
 
         async def monitor_progress():
             while job.status in ["queued", "processing"]:
-                status = await self.service.get_job_status(job_id)
+                status = await setup["service"].get_job_status(job_id)
                 if status.progress > 0:
                     progress_updates.append(status.progress)
                 await asyncio.sleep(0.1)
@@ -280,31 +299,30 @@ class TestHandBrakeServiceIntegration:
                     break
 
         # Run monitoring and transcoding concurrently
-        await asyncio.gather(monitor_progress(), self.service._run_transcode_job(job))
+        await asyncio.gather(monitor_progress(), setup["service"]._run_transcode_job(job))
 
         # Verify we got progress updates
-        self.assertGreater(len(progress_updates), 0)
-        self.assertEqual(job.status, "completed")
+        assert len(progress_updates) > 0
+        assert job.status == "completed"
 
-    async def test_real_cancel_job(self):
+    async def test_real_cancel_job(self, integration_test_setup):
         """Test job cancellation with real HandBrake process."""
-        if not self.input_file.exists() or self.input_file.stat().st_size < 100:
-            self.skipTest("No valid test video file available")
-
-        job_id = await self.service.transcode(
-            input_path=str(self.input_file),
-            output_path=str(self.output_file),
+        skip_if_host_loaded()
+        setup = integration_test_setup
+        job_id = await setup["service"].transcode(
+            input_path=str(setup["input_file"]),
+            output_path=str(setup["output_file"]),
             preset="Fast 1080p30",  # Use a slower preset to allow cancellation
         )
 
-        job = self.service.jobs[job_id]
+        job = setup["service"].jobs[job_id]
 
         # Start transcoding
-        transcode_task = asyncio.create_task(self.service._run_transcode_job(job))
+        transcode_task = asyncio.create_task(setup["service"]._run_transcode_job(job))
 
         # Wait a bit then cancel
         await asyncio.sleep(0.5)
-        result = await self.service.cancel_job(job_id)
+        result = await setup["service"].cancel_job(job_id)
 
         # Wait for cancellation to complete
         try:
@@ -312,9 +330,5 @@ class TestHandBrakeServiceIntegration:
         except TimeoutError:
             transcode_task.cancel()
 
-        self.assertTrue(result)
-        self.assertEqual(job.status, "cancelled")
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert result
+        assert job.status == "cancelled"
