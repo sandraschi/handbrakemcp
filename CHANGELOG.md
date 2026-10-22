@@ -1,4 +1,12 @@
 
+## [Unreleased] — 2026-10-23 (onboarding)
+
+### Added
+- **Onboarding gate (HIGH → closed)**: `docs/ONBOARDING.md` (7-section standard: purpose, free-forever cost table, CLI prerequisites, winget steps, 6 pitfalls, `/health` sanity check, declared doubles). INSTALL.md top quote + README onboarding pointer.
+- **Backend signal**: `/health` now returns `handbrake: {cli_available, cli_path, cli_version, instance_configured}` via non-raising `probe_handbrake_cli()` (PATH + WinGet fallback). Missing-CLI error now names the winget command and the onboarding doc.
+- **Webapp cues**: red under-hero `data-testid="onboarding-cue"` CTA on the Dashboard when `instance_configured === false`; Transcoding Engine panel in Settings (live badge + install command); Help page onboarding pointer. No MOCK content anywhere — empty states were already honest, declared in ONBOARDING § Declared doubles.
+- Probe unit tests (present/missing); suite: **8 passed, 3 skipped**.
+
 ## [Unreleased] — 2026-10-23 (assfix deferreds)
 
 ### Added

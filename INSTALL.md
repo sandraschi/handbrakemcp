@@ -1,5 +1,7 @@
 # Installation
 
+> **First time?** Complete [docs/ONBOARDING.md](docs/ONBOARDING.md) before expecting live host calls.
+
 ## 🚀 Quick Start (recommended)
 
 ```powershell

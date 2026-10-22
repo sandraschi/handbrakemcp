@@ -9,6 +9,8 @@
 
 
 > 📖 **[Installation Guide](INSTALL.md)** — quick start, manual setup, and troubleshooting
+>
+> 🆕 **First time? Start with [Onboarding](docs/ONBOARDING.md)** — install HandBrakeCLI (the transcoding engine, ~15 MB) before expecting live encodes.
 
 [![CI/CD Pipeline](https://github.com/sandraschi/handbrake-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sandraschi/handbrake-mcp/actions/workflows/ci.yml)
 [![Docker](https://img.shields.io/badge/Docker-Supported-blue)](https://www.docker.com/)
