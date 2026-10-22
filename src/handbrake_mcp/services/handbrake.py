@@ -5,6 +5,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,27 @@ class HandBrakeError(Exception):
     """Custom exception for HandBrake related errors."""
 
     pass
+
+
+def probe_handbrake_cli() -> dict[str, Any]:
+    """Non-raising HandBrakeCLI presence probe for /health and onboarding UX.
+
+    Checks PATH first, then the WinGet install location. Never raises —
+    the Dashboard red onboarding CTA and the sanity check in
+    docs/ONBOARDING.md both read this.
+
+    ## Return Format
+    `{"available": bool, "path": str | None}`.
+
+    ## Examples
+    `probe_handbrake_cli()` → `{"available": True, "path": "C:/.../HandBrakeCLI.exe"}`.
+    """
+    from handbrake_mcp.core.config import settings as _settings
+
+    found = shutil.which(_settings.hbb_path)
+    if not found and Path(_settings.winget_hbb_path).exists():
+        found = _settings.winget_hbb_path
+    return {"available": found is not None, "path": found}
 
 
 class TranscodeJob(BaseModel):
@@ -62,8 +84,9 @@ class HandBrakeService:
         if not handbrake_path:
             raise HandBrakeError(
                 f"HandBrakeCLI not found. Checked PATH and {settings.winget_hbb_path}. "
-                f"Please install HandBrakeCLI and ensure it's in your PATH "
-                f"or set HBB_PATH in your environment variables."
+                f"Install it with: winget install -e --id HandBrake.HandBrake.CLI "
+                f"(see docs/ONBOARDING.md § First-timer setup steps), then restart "
+                f"your terminal so PATH picks it up — or set HBB_PATH in your environment variables."
             )
         return Path(handbrake_path)
 

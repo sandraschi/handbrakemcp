@@ -48,9 +48,23 @@ coverage.xml
 # DXT
 *.dxt
 
-# HandBrake
+# HandBrake (encode outputs: *.log everywhere, *.json as stray CLI output.
+# Source JSON must stay tracked — un-ignore it explicitly. Without these
+# negations a fresh clone is missing package.json/tsconfigs/manifests.)
 *.log
 *.json
+!package.json
+!**/package.json
+!tsconfig*.json
+!**/tsconfig*.json
+!biome.json
+!**/biome.json
+!manifest.json
+!glama.json
+!mcpb/manifest.json
+!hooks/hooks.json
+!.claude-plugin/plugin.json
+!.agents/skills/config.json
 
 # Node / webapp
 node_modules/

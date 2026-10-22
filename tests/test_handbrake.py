@@ -180,6 +180,26 @@ class TestHandBrakeServiceUnit:
             assert "HQ 1080p30" in presets
             assert "Very Fast 1080p30" in presets
 
+    def test_probe_cli_present(self):
+        """Probe reports available when the CLI resolves via PATH."""
+        from handbrake_mcp.services.handbrake import probe_handbrake_cli
+
+        with patch("shutil.which", return_value="C:/fake/HandBrakeCLI.exe"):
+            result = probe_handbrake_cli()
+        assert result == {"available": True, "path": "C:/fake/HandBrakeCLI.exe"}
+
+    def test_probe_cli_missing(self, tmp_path):
+        """Probe reports unavailable (never raises) when nothing resolves."""
+        from handbrake_mcp.core.config import settings
+        from handbrake_mcp.services.handbrake import probe_handbrake_cli
+
+        with (
+            patch("shutil.which", return_value=None),
+            patch.object(settings, "winget_hbb_path", str(tmp_path / "nope.exe")),
+        ):
+            result = probe_handbrake_cli()
+        assert result == {"available": False, "path": None}
+
 
 @pytest.fixture
 async def integration_test_setup():

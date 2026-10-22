@@ -264,10 +264,27 @@ async def api_shutdown():
 
 @app.get("/health")
 async def health():
-    """System health endpoint for the SOTA dashboard."""
+    """System health endpoint for the SOTA dashboard.
+
+    The `handbrake` block is the onboarding signal: `instance_configured`
+    is True only when HandBrakeCLI is actually runnable. The Dashboard red
+    onboarding CTA (`data-testid="onboarding-cue"`) keys off it.
+    """
     cpu_percent = psutil.cpu_percent()
     memory = psutil.virtual_memory()
     tools = await mcp.list_tools()
+
+    from handbrake_mcp.services.handbrake import probe_handbrake_cli
+
+    cli = probe_handbrake_cli()
+    cli_version = "unknown"
+    if cli["available"]:
+        try:
+            from handbrake_mcp.services.handbrake import get_handbrake_service
+
+            cli_version = await get_handbrake_service().get_handbrake_version()
+        except Exception as e:
+            logger.warning(f"HandBrakeCLI version probe failed: {e}")
 
     # Attempt to get GPU temp via nvidia-smi
     gpu_temp = "N/A"
@@ -303,6 +320,12 @@ async def health():
         "server": "handbrake-mcp",
         "version": "1.1.1",
         "tool_count": len(tools),
+        "handbrake": {
+            "cli_available": cli["available"],
+            "cli_path": cli["path"],
+            "cli_version": cli_version,
+            "instance_configured": bool(cli["available"]),
+        },
         "system": {
             "cpu_percent": cpu_percent,
             "memory": {"percent": memory.percent, "available_gb": round(memory.available / (1024**3), 2)},
