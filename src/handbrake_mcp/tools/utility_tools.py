@@ -169,6 +169,30 @@ def get_all_tool_documentation() -> dict[str, ToolDocumentation]:
     return getattr(get_all_tool_documentation, "_docs", {})
 
 
+def _error_response(
+    tool_name: str,
+    error: Exception | str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Shared error helper (fleet standard TOOL_DESIGN_STANDARDS.md §7.1 Pattern 3).
+
+    Logs with traceback via ``logger.exception`` and returns a dialogic
+    ``{"success": False, "message": ...}`` dict. Use inside ``except`` blocks
+    of dict-returning tools and HTTP routes instead of ad-hoc handling.
+
+    ## Return Format
+    `{"success": False, "message": str, ...extra}`.
+
+    ## Examples
+    `return _error_response("get_provider_status", e)`.
+    """
+    logger.exception(f"{tool_name} failed: {error}")
+    body: dict[str, Any] = {"success": False, "message": f"{tool_name} failed: {error}"}
+    if extra:
+        body.update(extra)
+    return body
+
+
 # Tool registration is now handled via @mcp.tool() decorators
 # This function is deprecated and kept for backward compatibility
 

@@ -3,6 +3,7 @@
 import logging
 import subprocess
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psutil
@@ -23,19 +24,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# NOTE: legacy/alternate HTTP entry (Docker + old docs point here).
+# The canonical live server is handbrake_mcp.server:app.
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Startup/shutdown: init services on entry, stop them on exit."""
+    logger.info("Starting HandBrake MCP server (main.py legacy entry)...")
+    await notification_service.initialize()
+    if settings.watch_folders:
+        logger.info(f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}")
+        await watch_service.start(
+            callback=process_new_file,
+            watch_dirs=settings.watch_folders,
+        )
+    logger.info("HandBrake MCP server started successfully")
+    yield
+    logger.info("Shutting down HandBrake MCP server (main.py legacy entry)...")
+    if watch_service.is_running():
+        await watch_service.stop()
+    await notification_service.shutdown()
+    logger.info("HandBrake MCP server has been shut down")
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title="HandBrake MCP Server",
-    description="FastMCP 2.12.0 compliant server for video transcoding with HandBrake",
-    version="0.1.0",
+    description="FastMCP 3.4 compliant server for video transcoding with HandBrake (legacy entry; canonical: handbrake_mcp.server:app)",
+    version="1.1.1",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
-# Add CORS middleware
+# Add CORS middleware (no wildcard: explicit origins + LAN/Tauri regex)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:10874",
+        "http://localhost:10874",
+        "http://goliath:10874",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|goliath|tauri\.localhost)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,8 +82,8 @@ app.add_middleware(
 # from handbrake_mcp.api.v1.endpoints import router as api_router
 # app.include_router(api_router, prefix="/api/v1")
 
-# Mount MCP app for HTTP access
-app.mount("/mcp", mcp.app)
+# Mount MCP app for HTTP access (FastMCP 3.x: http_app, not the removed .app)
+app.mount("/mcp", mcp.http_app(path="/"))
 
 
 async def process_new_file(file_path: Path):
@@ -66,40 +99,6 @@ async def process_new_file(file_path: Path):
         )
     except Exception as e:
         logger.error(f"Error processing file {file_path}: {e}")
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application services on startup."""
-    logger.info("Starting HandBrake MCP server...")
-
-    # Initialize notification service
-    await notification_service.initialize()
-
-    # Initialize watch folders
-    if settings.watch_folders:
-        logger.info(f"Watching folders: {', '.join(str(f) for f in settings.watch_folders)}")
-        await watch_service.start(
-            callback=process_new_file,
-            watch_dirs=settings.watch_folders,
-        )
-
-    logger.info("HandBrake MCP server started successfully")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on shutdown."""
-    logger.info("Shutting down HandBrake MCP server...")
-
-    # Stop the watch service
-    if watch_service.is_running():
-        await watch_service.stop()
-
-    # Shut down the notification service
-    await notification_service.shutdown()
-
-    logger.info("HandBrake MCP server has been shut down")
 
 
 async def main():

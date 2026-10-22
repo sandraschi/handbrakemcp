@@ -61,6 +61,12 @@ def get_system_status() -> str:
     """
     Get comprehensive system status including tools, configuration, and resources.
 
+    ## Return Format
+    Formatted multi-section status `str` (server info, tools, categories, config, resources, quick help).
+
+    ## Examples
+    `get_system_status()` → `"HANDBRAKE MCP SERVER STATUS\n..."`.
+
     This function provides a complete overview of the HandBrake MCP server's current
     state, including registered tools, system configuration, resource utilization,
     and operational status. Essential for monitoring, diagnostics, and system administration.
@@ -189,3 +195,56 @@ def get_system_status() -> str:
     lines.append("  - get_provider_status() - System status")
 
     return "\n".join(lines)
+
+
+@tool(
+    name="show_status_card",
+    description="Show HandBrake MCP status as a rich Prefab card (jobs, presets, resources)",
+    tags={"status", "card", "prefab", "ui"},
+    app=True,
+    annotations={"readonly": True},
+)
+async def show_status_card() -> dict:
+    """Show HandBrake MCP status as a rich Prefab card.
+
+    Renders active/transcode job counts, HandBrake presets, and CPU/memory
+    telemetry in chat — no need to parse JSON.
+
+    ## Return Format
+    `PrefabApp` with a status card view.
+
+    ## Examples
+    `show_status_card()` → card with job counts + resource gauges.
+    """
+    import psutil
+    from prefab_ui.app import PrefabApp
+    from prefab_ui.components import Card, CardContent, Column, Grid, Heading, Muted, Separator, Text
+
+    from handbrake_mcp.services.handbrake import get_handbrake_service
+
+    hb = get_handbrake_service()
+    jobs = list(hb.jobs.values())
+    active = sum(1 for j in jobs if j.status == "processing")
+    try:
+        presets = await hb.get_presets()
+    except Exception:
+        presets = []
+    cpu = psutil.cpu_percent()
+    mem = psutil.virtual_memory().percent
+
+    with Column(gap=4, css_class="p-4") as view:
+        Heading(f"HandBrake MCP — Status ({active}/{len(jobs)} active)")
+        Separator()
+        with Grid(columns=3, gap=3):
+            with Card(), CardContent(css_class="pt-4"):
+                Muted("Jobs")
+                Heading(f"{active} active / {len(jobs)} total")
+            with Card(), CardContent(css_class="pt-4"):
+                Muted("Presets")
+                Heading(str(len(presets)))
+                Text(", ".join(presets[:3]) if presets else "CLI unavailable")
+            with Card(), CardContent(css_class="pt-4"):
+                Muted("Resources")
+                Heading(f"CPU {cpu}% / MEM {mem}%")
+
+    return PrefabApp(view=view, title="HandBrake MCP Status")

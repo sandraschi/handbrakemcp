@@ -31,6 +31,7 @@ from handbrake_mcp.core.config import settings
 from handbrake_mcp.services.notification_service import notification_service
 from handbrake_mcp.services.processing_service import processing_service
 from handbrake_mcp.services.watch_service import watch_service
+from handbrake_mcp.tools.utility_tools import _error_response
 
 # Configure logging
 logging.basicConfig(
@@ -368,7 +369,7 @@ async def list_jobs():
             )
         return {"status": "ok", "jobs": job_list}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return _error_response("list_jobs", e, extra={"status": "error"})
 
 
 @app.post("/api/transcode")
@@ -394,8 +395,7 @@ async def start_transcode(data: dict):
         job_id = await hb.transcode(input_path, output_path, preset)
         return {"status": "ok", "job_id": job_id, "message": "Job queued successfully"}
     except Exception as e:
-        logger.error(f"Transcode trigger failed: {e}")
-        return {"status": "error", "message": str(e)}
+        return _error_response("start_transcode", e, extra={"status": "error"})
 
 
 # Mount the MCP app to the FastAPI instance

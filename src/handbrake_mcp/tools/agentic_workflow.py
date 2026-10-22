@@ -1,6 +1,8 @@
 import logging
+from typing import Annotated
 
 from fastmcp import Context, FastMCP
+from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -9,10 +11,26 @@ def set_mcp_instance(mcp: FastMCP):
     """Register agentic workflow tool with the provided mcp instance."""
 
     @mcp.tool()
-    async def handbrake_agentic_workflow(goal: str, ctx: Context) -> str:
+    async def handbrake_agentic_workflow(
+        goal: Annotated[
+            str,
+            Field(
+                description="High-level objective, e.g. 'Optimize all videos in C:/Movies for iPad Pro'",
+                min_length=1,
+                max_length=1000,
+            ),
+        ],
+        ctx: Context,
+    ) -> str:
         """
         High-level agentic workflow to achieve complex transcoding goals.
         Uses SEP-1577 sampling to request guidance from the host.
+
+        ## Return Format
+        Markdown `str`: `### Agentic Plan for: <goal>` plus the sampled plan and next-step tools.
+
+        ## Examples
+        `handbrake_agentic_workflow("Transcode /watch to AV1")` → step-by-step plan.
 
         Args:
             goal: The high-level objective (e.g. 'Optimize all videos in C:/Movies for iPad Pro').
@@ -45,10 +63,22 @@ def set_mcp_instance(mcp: FastMCP):
         return f"### Agentic Plan for: {goal}\n\n{plan_text}\n\n*Execute the transcodes via handbrake_ops as per the plan.*"
 
     @mcp.tool()
-    async def handbrake_optimize_library(source_dir: str, target_device: str, ctx: Context) -> str:
+    async def handbrake_optimize_library(
+        source_dir: Annotated[str, Field(description="Directory tree to optimize", min_length=1, max_length=1000)],
+        target_device: Annotated[
+            str, Field(description="Target device profile, e.g. 'iPad Pro'", min_length=1, max_length=100)
+        ],
+        ctx: Context,
+    ) -> str:
         """
         Expert tool to optimize an entire directory for a specific device.
         Leverages sampling to find the best preset for the given device.
+
+        ## Return Format
+        Markdown `str` with the device strategy and sampled preset guidance.
+
+        ## Examples
+        `handbrake_optimize_library("D:/Videos", "Apple TV 4K")` → optimization strategy.
         """
         ctx.info(f"Finding optimal preset for {target_device}...")
 

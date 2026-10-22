@@ -14,11 +14,13 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from handbrake_mcp.core.config import settings
 from handbrake_mcp.services.handbrake import get_handbrake_service
-from handbrake_mcp.tools.utility_tools import JobStatusResponse, TranscodeResponse
+from handbrake_mcp.tools.utility_tools import JobStatusResponse, TranscodeResponse, _error_response
 
 logger = logging.getLogger(__name__)
 
@@ -71,13 +73,29 @@ def register_pending_tools():
     tags={"video", "transcoding", "handbrake", "media", "encoding"},
 )
 async def transcode_video(
-    input_path: str,
-    output_path: str,
-    preset: str | None = None,
-    options: dict[str, str | int | float | bool] | None = None,
+    input_path: Annotated[
+        str, Field(description="Input video file path (MP4, MKV, AVI, MOV, M4V)", min_length=1, max_length=1000)
+    ],
+    output_path: Annotated[
+        str, Field(description="Output file path; format taken from extension", min_length=1, max_length=1000)
+    ],
+    preset: Annotated[
+        str | None, Field(default=None, description="HandBrake preset name; None = configured default")
+    ] = None,
+    options: Annotated[
+        dict[str, str | int | float | bool] | None,
+        Field(default=None, description="Extra HandBrake CLI options; override the preset"),
+    ] = None,
 ) -> TranscodeResponse:
     """
     Transcode a single video file using HandBrake with professional quality settings.
+
+    ## Return Format
+    `TranscodeResponse` with `job_id`, `status` ('queued'|'failed'), `input_path`, `output_path`, and `error` when failed.
+
+    ## Examples
+    `transcode_video("/videos/in.mp4", "/videos/out.mkv")` → `{'job_id': 'job_12345', 'status': 'queued', ...}`.
+    `transcode_video("/videos/m.mkv", "/videos/hq.mp4", preset="HQ 1080p30")` for quality.
 
     This tool provides high-quality video transcoding using HandBrake's advanced encoding engine.
     It supports various formats and presets for optimal output quality and file size optimization.
@@ -196,11 +214,24 @@ async def transcode_video(
     tags={"video", "transcoding", "batch", "bulk", "parallel", "handbrake"},
 )
 async def batch_transcode(
-    jobs: list[dict[str, Any]],
-    default_preset: str | None = None,
+    jobs: Annotated[
+        list[dict[str, Any]],
+        Field(
+            description="Job dicts with input_path/output_path plus optional preset/options",
+            min_length=1,
+            max_length=100,
+        ),
+    ],
+    default_preset: Annotated[str | None, Field(default=None, description="Preset for jobs that omit one")] = None,
 ) -> list[TranscodeResponse]:
     """
     Transcode multiple video files in efficient batch processing mode with parallel execution.
+
+    ## Return Format
+    `list[TranscodeResponse]` — one entry per job, each with `job_id`, `status` ('queued'|'failed'), paths, and `error` when failed.
+
+    ## Examples
+    `batch_transcode([{"input_path": "/v/a.mp4", "output_path": "/v/a.mkv"}])` → one queued response per job.
 
     This tool enables processing multiple videos simultaneously using HandBrake's advanced batch
     processing capabilities. Each job runs independently and can have different settings, allowing
@@ -342,9 +373,19 @@ async def batch_transcode(
     description="Get comprehensive real-time status and progress information for video transcode jobs",
     tags={"status", "monitoring", "jobs", "progress", "tracking", "handbrake"},
 )
-async def get_job_status(job_id: str) -> JobStatusResponse:
+async def get_job_status(
+    job_id: Annotated[
+        str, Field(description="Job identifier from transcode_video/batch_transcode", min_length=1, max_length=100)
+    ],
+) -> JobStatusResponse:
     """
     Get comprehensive real-time status and progress information for video transcode jobs.
+
+    ## Return Format
+    `JobStatusResponse` with `job_id`, `status` ('queued'|'processing'|'completed'|'failed'|'cancelled'|'not_found'), `progress` (0-100), paths, and `error` when failed.
+
+    ## Examples
+    `get_job_status("job_12345")` → `{'status': 'processing', 'progress': 45.2, ...}`.
 
     This tool provides detailed monitoring capabilities for video transcoding jobs, including
     progress percentage, current status, performance metrics, and error diagnostics. It's
@@ -469,9 +510,19 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     description="Cancel a running or queued video transcode job with immediate effect and resource cleanup",
     tags={"control", "jobs", "cancel", "management", "emergency", "handbrake"},
 )
-async def cancel_job(job_id: str) -> bool:
+async def cancel_job(
+    job_id: Annotated[
+        str, Field(description="Job identifier of a queued/processing job", min_length=1, max_length=100)
+    ],
+) -> bool:
     """
     Cancel a running or queued video transcode job with immediate effect and resource cleanup.
+
+    ## Return Format
+    `bool` — True when the job was cancelled (or already terminal), False when the id is unknown.
+
+    ## Examples
+    `cancel_job("job_12345")` → True.
 
     This tool provides immediate job termination capabilities for video transcoding operations.
     It gracefully stops running jobs, removes queued jobs from the processing pipeline, and
@@ -573,6 +624,12 @@ async def cancel_job(job_id: str) -> bool:
 async def get_presets() -> list[str]:
     """
     Get a comprehensive, dynamically updated list of all available HandBrake presets for video encoding.
+
+    ## Return Format
+    `list[str]` of preset names (e.g. "Fast 1080p30", "HQ 1080p30 Surround").
+
+    ## Examples
+    `get_presets()` → `["Fast 1080p30", "HQ 1080p30", ...]`.
 
     This tool provides real-time access to all HandBrake presets installed on the system,
     including built-in presets, custom presets, and presets from installed packages. Presets
@@ -685,6 +742,12 @@ async def get_presets() -> list[str]:
 async def get_loaded_models() -> list[str]:
     """
     Get list of loaded models (HandBrake presets) - MCP compatibility endpoint.
+
+    ## Return Format
+    `list[str]` of model/preset names. Same source as `get_presets()`.
+
+    ## Examples
+    `get_loaded_models()` → `["Fast 1080p30", ...]`.
 
     This tool serves as a compatibility layer for MCP (Model Control Protocol) clients and tools
     that expect a "models" endpoint. It provides the same comprehensive preset information as
@@ -806,6 +869,12 @@ async def get_loaded_models() -> list[str]:
 async def get_provider_status() -> dict[str, Any]:
     """
     Get comprehensive real-time status and system information about the HandBrake video processing provider.
+
+    ## Return Format
+    `{"status": "ready"|"error", "version": str, "handbrake_version": str, "supported_presets": [...], "system_info": str, "max_concurrent_jobs": int, "active_jobs": int}` (plus `success`/`message` on error via `_error_response`).
+
+    ## Examples
+    `get_provider_status()` → `{'status': 'ready', 'active_jobs': 0, ...}`.
 
     This tool provides detailed, live information about the HandBrake MCP server's health,
     configuration, capabilities, and current operational state. It's essential for monitoring,
@@ -982,8 +1051,4 @@ async def get_provider_status() -> dict[str, Any]:
             "active_jobs": active_jobs,
         }
     except Exception as e:
-        logger.exception("Error getting provider status")
-        return {
-            "status": "error",
-            "error": str(e),
-        }
+        return _error_response("get_provider_status", e, extra={"status": "error", "error": str(e)})

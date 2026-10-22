@@ -9,6 +9,10 @@ This module contains all help, documentation, and tool discovery tools:
 - search_tools: Keyword-based tool discovery
 """
 
+from typing import Annotated
+
+from pydantic import Field
+
 from .utility_tools import get_all_tool_documentation
 
 # Import MCP instance for decorator registration
@@ -59,9 +63,20 @@ def register_pending_tools():
     description="Get comprehensive help for tools at different detail levels",
     tags={"help", "documentation", "information"},
 )
-def get_tool_help(tool_name: str, level: str = "basic") -> str:
+def get_tool_help(
+    tool_name: Annotated[
+        str, Field(description="Registered tool name (see multilevel_help)", min_length=1, max_length=100)
+    ],
+    level: Annotated[str, Field(default="basic", description='Detail level: "basic"|"detailed"|"full"')] = "basic",
+) -> str:
     """
     Get help for a specific tool at different detail levels.
+
+    ## Return Format
+    Formatted help `str` (basic/detailed/full); error text when the tool or level is unknown.
+
+    ## Examples
+    `get_tool_help("transcode_video", "basic")` → `"[TOOL] TRANSCODE_VIDEO: ..."`.
 
     This function provides contextual help and documentation for individual MCP tools.
     It supports multiple detail levels to accommodate different user needs and experience levels.
@@ -152,6 +167,12 @@ def get_tool_categories() -> dict[str, list[str]]:
     """
     Get all tools organized by category with programmatic access to category structure.
 
+    ## Return Format
+    `dict[category, list[tool_name]]` (e.g. `{"video": ["transcode_video", ...]}`).
+
+    ## Examples
+    `get_tool_categories()` → `{"video": [...], "status": [...], ...}`.
+
     This function provides a dictionary mapping of categories to tool names, enabling
     programmatic discovery and organization of tools by their functional categories.
     Essential for building user interfaces, documentation systems, and tool discovery features.
@@ -222,9 +243,17 @@ def get_tool_categories() -> dict[str, list[str]]:
     return categories
 
 
-def get_tools_by_category(category: str) -> list[str]:
+def get_tools_by_category(
+    category: Annotated[str, Field(description="Category name (see get_tool_categories)", min_length=1, max_length=50)],
+) -> list[str]:
     """
     Get all tools belonging to a specific category with filtering capability.
+
+    ## Return Format
+    `list[str]` of tool names in the category (empty when unknown).
+
+    ## Examples
+    `get_tools_by_category("video")` → `["transcode_video", "batch_transcode"]`.
 
     This function provides targeted tool discovery by filtering tools based on
     their category membership. Useful for building category-specific interfaces
@@ -298,9 +327,19 @@ def get_tools_by_category(category: str) -> list[str]:
     description="Search tools by name, description, or category",
     tags={"help", "documentation", "search", "discovery"},
 )
-def search_tools(query: str) -> list[str]:
+def search_tools(
+    query: Annotated[
+        str, Field(description="Keyword matched against names, descriptions, categories", min_length=1, max_length=200)
+    ],
+) -> list[str]:
     """
     Search tools by name, description, or category using keyword matching.
+
+    ## Return Format
+    `list[str]` of matching tool names (case-insensitive).
+
+    ## Examples
+    `search_tools("video")` → `["transcode_video", "batch_transcode", ...]`.
 
     This function provides powerful search capabilities across all tool metadata,
     enabling users to discover tools through natural language queries. Searches
@@ -395,9 +434,20 @@ def search_tools(query: str) -> list[str]:
     description="Get help at different levels: basic, detailed, full, categories",
     tags={"help", "documentation", "information", "categories"},
 )
-def get_multilevel_help(level: str = "basic", filter_by: str | None = None) -> str:
+def get_multilevel_help(
+    level: Annotated[
+        str, Field(default="basic", description='Help depth: "basic"|"detailed"|"full"|"categories"')
+    ] = "basic",
+    filter_by: Annotated[str | None, Field(default=None, description="Optional category/tool substring filter")] = None,
+) -> str:
     """
     Get comprehensive help at different detail levels across all tools and system functions.
+
+    ## Return Format
+    Formatted help `str` for the requested level (optionally filtered).
+
+    ## Examples
+    `get_multilevel_help("categories")` → category listing of every tool.
 
     This function provides system-wide help and documentation with multiple levels of detail
     and filtering capabilities. It's the primary help system for the HandBrake MCP server,
@@ -560,9 +610,20 @@ def get_multilevel_help(level: str = "basic", filter_by: str | None = None) -> s
     description="Get advanced help: overview, examples, troubleshooting, performance",
     tags={"help", "documentation", "advanced", "troubleshooting"},
 )
-def get_advanced_help(tool_name: str | None = None, help_type: str = "overview") -> str:
+def get_advanced_help(
+    tool_name: Annotated[str | None, Field(default=None, description="Tool to focus on; None = system-wide")] = None,
+    help_type: Annotated[
+        str, Field(default="overview", description='Guide kind: "overview"|"examples"|"troubleshooting"|"performance"')
+    ] = "overview",
+) -> str:
     """
     Get advanced help information for tools and system with specialized content and guidance.
+
+    ## Return Format
+    Formatted guide `str` for the requested `help_type`.
+
+    ## Examples
+    `get_advanced_help("transcode_video", "examples")` → usage examples guide.
 
     This function provides specialized help content for advanced users, including detailed
     usage examples, troubleshooting guides, performance optimization tips, and system-specific
