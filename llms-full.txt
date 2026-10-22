@@ -23,6 +23,7 @@ HandBrake MCP is an industrial-grade transcoding control plane built on FastMCP 
 - `health_check`: CPU/RAM/GPU/PID monitoring.
 - `get_job_status`: Real-time progress with ETA and bitrate.
 - `get_presets`: Discover native HandBrake presets.
+- `handbrake_shutdown`: Orderly self-termination (MCP tool) + `POST /api/shutdown` (HTTP).
 
 ## 🖥️ Industrial Dashboard
 The frontend (`web_sota/`) is a React/TypeScript/Vite app configured for:

@@ -1,4 +1,20 @@
 
+## [Unreleased] — 2026-10-22 (assfix)
+
+### Fixed (assfix handbrake-mcp, SOTA Score 14/100 → in progress)
+- **CRITICAL CORS wildcard**: `allow_origins` no longer contains `"*"`; explicit localhost/goliath/tauri origins + unconditional LAN/Tauri `allow_origin_regex` (`src/handbrake_mcp/server.py`).
+- **CRITICAL MCPB `${PWD}`**: `manifest.json` + `mcpb/manifest.json` `PYTHONPATH` now `${__dirname}` (Claude Desktop does not expand `${PWD}`); manifests bumped to 1.1.1 to match pyproject.
+- **HIGH silent swallows**: removed `S110`/`S112` from ruff `ignore`; fixed 3 real `except: pass` sites (bridge proxy, nvidia-smi probe, disk-space check) to log warnings.
+- **HIGH lifespan**: FastAPI app now composes `mcp_app.lifespan` (session manager starts for real clients, BUG-038 class).
+- **HIGH shutdown**: new `handbrake_shutdown` MCP tool + `POST /api/shutdown` (200 now, exit ~500 ms later) for the fleet launcher.
+- **HIGH justfile gaps**: added `serve`, `test`, `fmt`, `mcpb-pack` recipes.
+- **HIGH pyright source errors**: widened `transcode_video options` type, `batch_transcode jobs` typing with safe casts, `os.sys.platform` → `sys.platform`, `get_provider_status` return `dict[str, Any]`.
+- **MEDIUM gates**: added `T20` to ruff select; added `pytest-cov` to `dependency-groups dev` (collect works, 9 tests); added `.pre-commit-config.yaml` + `scripts/pre-commit-biome.ps1`; `.gitignore` now covers `node_modules/`, `*.mcpb`, `reports/`, `*.bak.*`.
+
+### Known remaining (deferred, still OPEN)
+- 7 pytest failures are environmental (Goliath RAM ~87% trips the 85% resource gate; HandBrakeCLI not installed → integration tests cannot run).
+- Runt sole domain skill (`SUGGESTED: skillbuild handbrake-mcp`), docstring `## Return Format`/`## Examples` + `Annotated` wave, bun migration, Prefab cards, session-context channels, launcher unification.
+
 ## [Unreleased] — 2026-06-14
 
 ### Added
@@ -59,4 +75,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of HandBrake MCP Server.
 - Core transcoding tools and job management.
 - Enterprise CI/CD pipeline and professional documentation system.
-
