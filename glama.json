@@ -1,0 +1,53 @@
+{
+    "$schema":  "https://glama.ai/mcp/schemas/server.json",
+    "maintainers":  [
+                        "sandraschi"
+                    ],
+    "name":  "handbrake-mcp",
+    "description":  "FastMCP 3.4+ server for video transcoding using HandBrakeCLI. Batch processing, watch folders, and 50+ quality presets. Beta status.",
+    "type":  "mcp_server",
+    "status":  "beta",
+    "framework":  "FastMCP 3.4+",
+    "tools":  16,
+    "transport":  [
+                      "stdio"
+                  ],
+    "keywords":  [
+                     "handbrake",
+                     "video",
+                     "transcoding",
+                     "encoding",
+                     "video-processing",
+                     "mcp-server",
+                     "fastmcp"
+                 ],
+    "features":  {
+                     "video_transcoding":  {
+                                               "enabled":  true,
+                                               "formats":  [
+                                                               "MP4",
+                                                               "MKV",
+                                                               "AVI",
+                                                               "MOV",
+                                                               "M4V"
+                                                           ]
+                                           },
+                     "batch_processing":  {
+                                              "enabled":  true
+                                          },
+                     "watch_folders":  {
+                                           "enabled":  true
+                                       },
+                     "quality_presets":  {
+                                             "enabled":  true,
+                                             "count":  "50+"
+                                         },
+                     "progress_tracking":  {
+                                               "enabled":  true
+                                           }
+                 },
+    "fleet":  {
+                  "stars":  "★★☆☆☆",
+                  "tier":  4
+              }
+}
