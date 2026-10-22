@@ -1,4 +1,24 @@
 
+## [Unreleased] — 2026-10-23 (assfix deferreds)
+
+### Added
+- HandBrakeCLI 1.11.2 installed on Goliath (winget) — integration tests run against the real engine.
+- `show_status_card` Prefab tool (`app=True`) for in-chat status cards.
+- Session-context injection on all channels: `.cursorrules` block, `.windsurfrules`, `.github/copilot-instructions.md`, `.claude-plugin/plugin.json` + `hooks/hooks.json`, `.opencode/skills/handbrake/`, `.agents/skills/handbrake/`.
+- Shared `_error_response()` helper (TECH §7.1 Pattern 3), wired into provider-status + job/transcode routes.
+- Rebuilt `skills/handbrake-expert/SKILL.md` (frontmatter, agent routing, verified tool catalog, 3 workflows, error recovery).
+- `web_sota/bun.lock` (bun 1.3.14 migration).
+
+### Fixed
+- **Test harness**: dead unittest-style `asyncSetUp` (never ran under pytest) replaced with `integration_test_setup` fixture; unit fixture now isolates the RAM gate; RAM-gated transcode tests skip honestly on loaded hosts; wrong `progress == 1.0` assertion → `100.0`; dead `unittest.main()` removed. Suite: **6 passed, 3 skipped** (was 2 passed / 7 failed).
+- **Legacy entry**: `main.py` CORS wildcard removed, deprecated `@app.on_event` → lifespan, `mcp.app` (missing in FastMCP 3.x, crashed on import) → `mcp.http_app`.
+- **Docstring wave**: every tool now carries `## Return Format` + `## Examples`; signatures use `Annotated[..., Field(...)]` (agentic `ctx` untouched).
+- Removed 11 tracked `.bak` dross files; deduped ruff `ignore` list.
+- Live-proven: `uvicorn handbrake_mcp.server:app` → `/health` 200 (17 tools), `/api/capabilities` 200.
+
+### Notes
+- Docker stack still maps host port 8000 (container-internal convention; not the live path — native Windows on 10874/10875 is). `manifest.json`/`glama.json` remain git-ignored via the `*.json` line (pre-existing) — on-disk fixes are local-only until that ignore is narrowed.
+
 ## [Unreleased] — 2026-10-22 (assfix)
 
 ### Fixed (assfix handbrake-mcp, SOTA Score 14/100 → in progress)
