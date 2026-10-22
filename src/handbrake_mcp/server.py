@@ -113,8 +113,20 @@ if bridge_urls:
             try:
                 mcp.add_provider(create_proxy(url))
                 _bridge_proxies.append(url)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Skipping unreachable MCP bridge {url}: {e}")
+
+# Mount the MCP app first so the parent lifespan can compose its session manager
+# (BUG-038 class: a bare FastAPI lifespan never starts the FastMCP session manager).
+mcp_app = mcp.http_app(path="/")
+
+
+@asynccontextmanager
+async def app_lifespan(app_instance: FastAPI):
+    """Parent lifespan that also enters the mounted MCP sub-app lifespan."""
+    async with mcp_app.lifespan(app_instance):
+        yield
+
 
 # Initialize FastAPI for custom routes and dashboard support
 # Standard FastAPI pattern with CORS support
@@ -122,18 +134,21 @@ app = FastAPI(
     title="HandBrake MCP SOTA Bridge",
     description="Universal media ingestion engine with Agentic Workflows",
     version="1.0.0",
+    lifespan=app_lifespan,
 )
 
 _tauri = os.environ.get("HANDBRAKE_TAURI", "").lower() in ("1", "true", "yes")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "*",
+        "http://127.0.0.1:10874",
+        "http://localhost:10874",
+        "http://goliath:10874",
         "http://tauri.localhost",
         "https://tauri.localhost",
         "tauri://localhost",
     ],
-    allow_origin_regex=r"https?://tauri\.localhost(:\d+)?" if _tauri else None,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|goliath|tauri\.localhost)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -230,6 +245,22 @@ async def diagnostics():
     }
 
 
+@app.post("/api/shutdown")
+async def api_shutdown():
+    """Orderly exit for the fleet launcher: respond 200 now, exit ~500 ms later.
+
+    The launcher calls this before Restart-Service so crawlers/writers can
+    checkpoint state instead of being hard-killed mid-write.
+    """
+    import threading
+
+    logger.info("POST /api/shutdown requested — exiting in ~500 ms")
+    timer = threading.Timer(0.5, lambda: os._exit(0))
+    timer.daemon = True
+    timer.start()
+    return {"status": "shutting_down"}
+
+
 @app.get("/health")
 async def health():
     """System health endpoint for the SOTA dashboard."""
@@ -263,8 +294,8 @@ async def health():
                 if len(parts) >= 2:
                     gpu_temp = parts[0].strip()
                     gpu_util = parts[1].strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"nvidia-smi probe failed, GPU telemetry unavailable: {e}")
 
     return {
         "status": "ok",
@@ -369,9 +400,31 @@ async def start_transcode(data: dict):
 
 # Mount the MCP app to the FastAPI instance
 # FastMCP 3.2 provides http_app() for this purpose
-# This returns a Starlette app that we mount as a sub-app
-mcp_app = mcp.http_app(path="/")
+# (mcp_app created above so app_lifespan can compose it; path="/" avoids BUG-008 double-prefix)
 app.mount("/mcp", mcp_app)
+
+
+@mcp.tool(
+    name="handbrake_shutdown",
+    description="Orderly shutdown of the HandBrake MCP server (responds immediately, exits ~500 ms later so in-flight writes flush)",
+    tags={"admin", "lifecycle", "shutdown"},
+)
+async def handbrake_shutdown() -> dict:
+    """Orderly self-termination for agents and the fleet launcher.
+
+    ## Return Format
+    `{"success": bool, "message": str}` — message confirms the exit delay.
+
+    ## Examples
+    `handbrake_shutdown()` → `{"success": True, "message": "shutting down in ~500 ms"}`.
+    """
+    import threading
+
+    logger.info("handbrake_shutdown requested — exiting in ~500 ms")
+    timer = threading.Timer(0.5, lambda: os._exit(0))
+    timer.daemon = True
+    timer.start()
+    return {"success": True, "message": "handbrake-mcp shutting down in ~500 ms"}
 
 
 def run():

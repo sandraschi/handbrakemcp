@@ -17,6 +17,24 @@ lint:
 fix:
     Set-Location '{{justfile_directory()}}'; uv run ruff check . --fix --unsafe-fixes; uv run ruff format .; Set-Location '{{justfile_directory()}}\web_sota'; npx @biomejs/biome check --write .
 
+# --- Serve / Test / Format ---
+
+# Start the HTTP bridge (backend on 10875)
+serve:
+    uv run python -m handbrake_mcp.server --http --port 10875
+
+# Run the test suite
+test:
+    uv run pytest tests/ -q
+
+# Format only (no lint)
+fmt:
+    uv run ruff format .
+
+# Pack the MCPB distribution bundle via the fleet shim
+mcpb-pack:
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\scripts\mcpb-pack.ps1'
+
 # --- Hardening ---
 
 # Execute Bandit security audit

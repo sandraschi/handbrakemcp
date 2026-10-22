@@ -12,7 +12,9 @@ This module contains all the core HandBrake video processing tools:
 
 import logging
 import os
+import sys
 from pathlib import Path
+from typing import Any
 
 from handbrake_mcp.core.config import settings
 from handbrake_mcp.services.handbrake import get_handbrake_service
@@ -72,7 +74,7 @@ async def transcode_video(
     input_path: str,
     output_path: str,
     preset: str | None = None,
-    options: dict[str, str] | None = None,
+    options: dict[str, str | int | float | bool] | None = None,
 ) -> TranscodeResponse:
     """
     Transcode a single video file using HandBrake with professional quality settings.
@@ -194,7 +196,7 @@ async def transcode_video(
     tags={"video", "transcoding", "batch", "bulk", "parallel", "handbrake"},
 )
 async def batch_transcode(
-    jobs: list[dict[str, str]],
+    jobs: list[dict[str, Any]],
     default_preset: str | None = None,
 ) -> list[TranscodeResponse]:
     """
@@ -302,19 +304,23 @@ async def batch_transcode(
     """
     results = []
     for job in jobs:
+        raw_options = job.get("options", {})
+        job_options: dict[str, str | int | float | bool] = raw_options if isinstance(raw_options, dict) else {}
+        raw_preset = job.get("preset", default_preset)
+        job_preset = str(raw_preset) if raw_preset is not None else (default_preset or settings.default_preset)
         try:
             job_id = await get_handbrake_service().transcode(
-                input_path=job["input_path"],
-                output_path=job["output_path"],
-                preset=job.get("preset", default_preset or settings.default_preset),
-                options=job.get("options", {}),
+                input_path=str(job["input_path"]),
+                output_path=str(job["output_path"]),
+                preset=job_preset,
+                options=job_options,
             )
             results.append(
                 TranscodeResponse(
                     job_id=job_id,
                     status="queued",
-                    input_path=job["input_path"],
-                    output_path=job["output_path"],
+                    input_path=str(job["input_path"]),
+                    output_path=str(job["output_path"]),
                 )
             )
         except Exception as e:
@@ -322,8 +328,8 @@ async def batch_transcode(
                 TranscodeResponse(
                     job_id=f"error_{len(results)}",
                     status="failed",
-                    input_path=job.get("input_path", ""),
-                    output_path=job.get("output_path", ""),
+                    input_path=str(job.get("input_path", "")),
+                    output_path=str(job.get("output_path", "")),
                     error=str(e),
                 )
             )
@@ -797,7 +803,7 @@ async def get_loaded_models() -> list[str]:
     description="Get comprehensive real-time status and system information about the HandBrake video processing provider",
     tags={"status", "system", "monitoring", "health", "diagnostics", "information", "handbrake"},
 )
-async def get_provider_status() -> dict[str, str]:
+async def get_provider_status() -> dict[str, Any]:
     """
     Get comprehensive real-time status and system information about the HandBrake video processing provider.
 
@@ -964,7 +970,7 @@ async def get_provider_status() -> dict[str, str]:
             logger.warning(f"Could not read version from pyproject.toml: {e}")
 
         # Get system information
-        system_info = f"{os.name} {os.sys.platform}"
+        system_info = f"{os.name} {sys.platform}"
 
         return {
             "status": "ready",

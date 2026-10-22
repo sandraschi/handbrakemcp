@@ -366,9 +366,9 @@ class HandBrakeService:
             output_disk = psutil.disk_usage(self.handbrake_path.parent)
             if output_disk.percent > 90:
                 raise ValueError(f"Disk space usage too high: {output_disk.percent:.1f}% (threshold: 90%)")
-        except Exception:
+        except Exception as e:
             # If we can't check disk space, continue anyway
-            pass
+            logger.warning(f"Disk-space check skipped: {e}")
 
     async def _run_transcode_job(self, job: TranscodeJob):
         """Run a transcoding job in the background."""
