@@ -182,23 +182,45 @@ class TestHandBrakeServiceUnit:
 
     def test_probe_cli_present(self):
         """Probe reports available when the CLI resolves via PATH."""
+        from handbrake_mcp.services import handbrake as hb_module
         from handbrake_mcp.services.handbrake import probe_handbrake_cli
 
-        with patch("shutil.which", return_value="C:/fake/HandBrakeCLI.exe"):
+        with (
+            patch("shutil.which", return_value="C:/fake/HandBrakeCLI.exe"),
+            patch.object(hb_module, "gui_install_paths", return_value=[]),
+        ):
             result = probe_handbrake_cli()
-        assert result == {"available": True, "path": "C:/fake/HandBrakeCLI.exe"}
+        assert result == {"available": True, "path": "C:/fake/HandBrakeCLI.exe", "gui_present": False}
 
     def test_probe_cli_missing(self, tmp_path):
         """Probe reports unavailable (never raises) when nothing resolves."""
         from handbrake_mcp.core.config import settings
+        from handbrake_mcp.services import handbrake as hb_module
         from handbrake_mcp.services.handbrake import probe_handbrake_cli
 
         with (
             patch("shutil.which", return_value=None),
             patch.object(settings, "winget_hbb_path", str(tmp_path / "nope.exe")),
+            patch.object(hb_module, "gui_install_paths", return_value=[]),
         ):
             result = probe_handbrake_cli()
-        assert result == {"available": False, "path": None}
+        assert result == {"available": False, "path": None, "gui_present": False}
+
+    def test_probe_gui_without_cli(self, tmp_path):
+        """Probe flags the classic trap: GUI installed, CLI missing."""
+        from handbrake_mcp.core.config import settings
+        from handbrake_mcp.services import handbrake as hb_module
+        from handbrake_mcp.services.handbrake import probe_handbrake_cli
+
+        fake_gui = tmp_path / "HandBrake.exe"
+        fake_gui.write_bytes(b"fake")
+        with (
+            patch("shutil.which", return_value=None),
+            patch.object(settings, "winget_hbb_path", str(tmp_path / "nope.exe")),
+            patch.object(hb_module, "gui_install_paths", return_value=[str(fake_gui)]),
+        ):
+            result = probe_handbrake_cli()
+        assert result == {"available": False, "path": None, "gui_present": True}
 
 
 @pytest.fixture

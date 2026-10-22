@@ -53,6 +53,12 @@ stands but every transcode fails: that one install is the whole onboarding.
 
 ## Pitfalls
 
+- **The GUI is not the engine.** Installing the HandBrake desktop app gives you
+  `C:\Program Files\HandBrake\HandBrake.exe` (+ `HandBrake.Worker.exe`) —
+  neither is the CLI, and the GUI installer never ships `HandBrakeCLI.exe`. If
+  the dashboard says "HandBrake app found, but the CLI engine is missing", that
+  is exactly your situation: install the CLI *alongside* the app
+  (`winget install -e --id HandBrake.HandBrake.CLI`). The two coexist fine.
 - **New terminal required.** The #1 failure: installing HandBrakeCLI and
   testing in the *same* shell. The `HandBrakeCLI` alias does not exist there.
   Open a fresh terminal (same reason the service checks PATH at startup).

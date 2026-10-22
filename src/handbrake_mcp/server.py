@@ -324,7 +324,15 @@ async def health():
             "cli_available": cli["available"],
             "cli_path": cli["path"],
             "cli_version": cli_version,
+            "gui_present": cli["gui_present"],
             "instance_configured": bool(cli["available"]),
+            "hint": (
+                "HandBrake GUI found but the HandBrakeCLI engine is missing "
+                "(the GUI never ships the CLI): install it with "
+                "'winget install -e --id HandBrake.HandBrake.CLI', then restart the terminal."
+                if (not cli["available"] and cli["gui_present"])
+                else None
+            ),
         },
         "system": {
             "cpu_percent": cpu_percent,

@@ -20,25 +20,45 @@ class HandBrakeError(Exception):
     pass
 
 
+def gui_install_paths() -> list[str]:
+    """Well-known HandBrake *GUI* install locations (which do NOT ship the CLI)."""
+    import os
+
+    candidates = [
+        r"C:\Program Files\HandBrake\HandBrake.exe",
+        r"C:\Program Files (x86)\HandBrake\HandBrake.exe",
+    ]
+    program_files = os.environ.get("ProgramFiles")
+    if program_files and program_files.lower() not in ("c:\\program files",):
+        candidates.append(str(Path(program_files) / "HandBrake" / "HandBrake.exe"))
+    program_files_x86 = os.environ.get("ProgramFiles(x86)")
+    if program_files_x86 and program_files_x86.lower() != r"c:\program files (x86)":
+        candidates.append(str(Path(program_files_x86) / "HandBrake" / "HandBrake.exe"))
+    return candidates
+
+
 def probe_handbrake_cli() -> dict[str, Any]:
     """Non-raising HandBrakeCLI presence probe for /health and onboarding UX.
 
-    Checks PATH first, then the WinGet install location. Never raises —
-    the Dashboard red onboarding CTA and the sanity check in
-    docs/ONBOARDING.md both read this.
+    Checks PATH first, then the WinGet install location. Also reports whether
+    the HandBrake *GUI* is installed — the classic trap is seeing
+    ``C:\\Program Files\\HandBrake\\HandBrake.exe`` and assuming the engine is
+    there. The GUI never ships HandBrakeCLI. Never raises; the Dashboard red
+    onboarding CTA and the sanity check in docs/ONBOARDING.md read this.
 
     ## Return Format
-    `{"available": bool, "path": str | None}`.
+    `{"available": bool, "path": str | None, "gui_present": bool}`.
 
     ## Examples
-    `probe_handbrake_cli()` → `{"available": True, "path": "C:/.../HandBrakeCLI.exe"}`.
+    `probe_handbrake_cli()` → `{"available": True, "path": "C:/.../HandBrakeCLI.exe", "gui_present": True}`.
     """
     from handbrake_mcp.core.config import settings as _settings
 
     found = shutil.which(_settings.hbb_path)
     if not found and Path(_settings.winget_hbb_path).exists():
         found = _settings.winget_hbb_path
-    return {"available": found is not None, "path": found}
+    gui = any(Path(p).exists() for p in gui_install_paths())
+    return {"available": found is not None, "path": found, "gui_present": gui}
 
 
 class TranscodeJob(BaseModel):
