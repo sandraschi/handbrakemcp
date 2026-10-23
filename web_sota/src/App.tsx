@@ -1,16 +1,20 @@
-import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AppLayout } from '@/components/layout/app-layout';
-import { Dashboard } from '@/pages/dashboard';
-import { Tools } from '@/pages/tools';
-import { Status } from '@/pages/status';
-import { Transcode } from '@/pages/transcode';
-import { Help } from '@/pages/help';
-import { Apps } from '@/pages/apps';
-import { Settings } from '@/pages/settings';
-import Logging from '@/pages/Logging';
-import { useZoom } from '@/lib/use-zoom';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
+import { AppLayout } from "@/components/layout/app-layout";
+import { useZoom } from "@/lib/use-zoom";
+import { Apps } from "@/pages/apps";
+import { Dashboard } from "@/pages/dashboard";
+import { Help } from "@/pages/help";
+import Logging from "@/pages/Logging";
+import { Settings } from "@/pages/settings";
+import { Status } from "@/pages/status";
+import { Tools } from "@/pages/tools";
+import { Transcode } from "@/pages/transcode";
 
 const queryClient = new QueryClient({
   defaultOptions: {
