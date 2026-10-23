@@ -8,7 +8,10 @@ async function checkBackendHealth(): Promise<{ ok: boolean; error?: string }> {
     if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Network error" };
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Network error",
+    };
   }
 }
 
@@ -36,14 +39,21 @@ export function useBackendStatus() {
           if (event.payload === "ready") {
             setRestarting(false);
             refresh();
-          } else if (typeof event.payload === "string" && event.payload.startsWith("error:")) {
+          } else if (
+            typeof event.payload === "string" &&
+            event.payload.startsWith("error:")
+          ) {
             setBackendOk(false);
             setRestarting(false);
           }
         });
-      } catch { /* not inside Tauri */ }
+      } catch {
+        /* not inside Tauri */
+      }
     })();
-    return () => { if (unlisten) unlisten(); };
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, [refresh]);
 
   const restartBackend = useCallback(async () => {
