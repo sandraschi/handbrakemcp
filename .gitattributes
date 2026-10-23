@@ -1,0 +1,4 @@
+# Fleet default: LF everywhere. PowerShell (5.1 and 7), Python, and Node all
+# read LF fine; Biome/Ruff *emit* LF. CRLF in the worktree breaks `biome ci`
+# formatting checks, so checkouts must stay LF on every machine.
+* text=auto eol=lf
