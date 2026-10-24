@@ -53,14 +53,20 @@ export default function Logging() {
       try {
         const r = await fetch(`${API_BASE}/api/logs?${params}`);
         const d = await r.json();
+        // Defensive: the endpoint contract is {entries: [], total: 0}.
+        // Anything else (proxy HTML, 404 body, empty response) must degrade
+        // to an empty list — never setEntries(undefined), which whitescreens
+        // the page on the next render (.map of undefined).
+        const list = Array.isArray(d?.entries) ? d.entries : [];
         if (opts.tail && opts.after_id) {
-          setEntries((prev) => [...prev, ...d.entries].slice(-200));
+          setEntries((prev) => [...prev, ...list].slice(-200));
         } else {
-          setEntries(d.entries);
+          setEntries(list);
         }
-        setTotal(d.total);
-        if (d.entries.length > 0) {
-          afterIdRef.current = d.entries[d.entries.length - 1].id;
+        setTotal(typeof d?.total === "number" ? d.total : list.length);
+        if (list.length > 0) {
+          const last = list[list.length - 1];
+          if (last && typeof last.id === "string") afterIdRef.current = last.id;
         }
       } catch (e) {
         console.error("Log fetch failed", e);
@@ -239,7 +245,9 @@ export default function Logging() {
             className="flex gap-3 py-0.5 hover:bg-slate-900/50 rounded px-1"
           >
             <span className="text-slate-600 w-20 shrink-0">
-              {e.timestamp.split(".")[0].split("T")[1] || e.timestamp}
+              {String(e.timestamp ?? "")
+                .split(".")[0]
+                .split("T")[1] || String(e.timestamp ?? "")}
             </span>
             <span
               className={`w-16 shrink-0 text-center rounded text-[10px] font-bold ${LEVEL_COLORS[e.level] || "text-slate-400"}`}
