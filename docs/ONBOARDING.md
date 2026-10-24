@@ -87,6 +87,8 @@ Onboarding worked when ALL of these are true:
 - Dashboard shows the green CLI panel (no red onboarding button).
 - `get_provider_status()` returns `"status": "ready"` with a populated
   `supported_presets` list (dozens of entries, not just the 3 fallbacks).
+- `GET http://127.0.0.1:10875/api/logs?limit=5` returns `{"status": "ok",
+  "entries": [...], "total": N}` — the Logging page has a live source.
 - Optional end-to-end: transcode a small clip and watch it reach
   `completed` at `progress: 100.0` via `get_job_status()`.
 
