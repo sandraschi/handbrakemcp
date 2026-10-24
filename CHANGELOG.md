@@ -1,4 +1,13 @@
 
+## [Unreleased] — 2026-10-23 (app bugs)
+
+### Fixed
+- **Log page crash (was: guaranteed white screen)**: `/api/logs*` never existed on the canonical backend — the page fetched a 404 body, `setEntries(undefined)`, and crashed on the next render. Added `GET /api/logs` (+ export, DELETE) backed by a new in-memory `services/activity_log.py` ring (stdlib logging bridge captures service events; HTTP layer logs transcodes). Frontend hardened with `Array.isArray` guards regardless.
+- **Transcode page gutted UI fixed**: hardcoded `127.0.0.1:10875` → shared `API_BASE`; added server-side file picker (`GET /api/browse`, new `FileBrowser.tsx` — real local paths, works in browser and Tauri, no native plugin needed); added Video (encoder/RF/bitrate), Resolution (w/h/max), Audio (tracks/all/audio encoder/bitrate/language), Subtitle (track/burn/SRT file+lang) controls wired through a new `options` field on `POST /api/transcode` (allowlist extended: `vb`, `audio-lang-list`, `subtitle-burned`, `srt-*`, `maxWidth/Height`, ...).
+- **Preset discovery was broken**: `--preset-list` prints to *stderr* (service only read stdout → permanent 3-item fallback) and the parser checked `startswith("  ")` after `strip()` (dead branch). Fixed both; dashboard now lists the real ~100 presets.
+- **Progress never moved**: `--json` progress is pretty-printed multi-line (`Progress.Working.Progress`, 0..1 fraction), never single-line `{"Progress": n}`. Added buffered `_extract_progress` + unit tests; short encodes still jump 0→100 (pipe buffering) — completion path guarantees 100.
+- **Cancel race + teardown lock**: a cancel landing during process exit overwrote `cancelled` with `failed`; double-started test jobs left a HandBrake holding `input.mp4` so fixture cleanup blew up on Windows. Service now preserves terminal `cancelled`; tests build one job run and reap the process handle.
+
 ## [Unreleased] — 2026-10-23 (onboarding)
 
 ### Added
