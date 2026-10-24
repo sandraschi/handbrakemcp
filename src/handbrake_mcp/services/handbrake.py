@@ -162,29 +162,41 @@ class HandBrakeService:
         return self._supported_presets
 
     def _parse_presets_from_output(self, output: str) -> list[str]:
-        """Parse preset names from HandBrake CLI output."""
+        """Parse preset names from HandBrake CLI output.
+
+        HandBrakeCLI >= 1.x prints the list on stderr in this shape::
+
+            General/
+                Very Fast 1080p30
+                    Small H.264 video (up to 1080p30) ...
+
+        Category headers end with ``/`` at zero indent, preset names sit at
+        4-space indent, and their descriptions are indented deeper. Engine log
+        lines start with ``[``. (Older mock-style fixtures with 2-space names
+        and no categories still parse: any 2-6-space-indented line counts.)
+        """
         presets = []
-        lines = output.strip().split("\n")
-
-        for line in lines:
-            line = line.strip()
-            if not line:
+        for raw_line in output.splitlines():
+            if not raw_line.strip():
                 continue
-
-            # Try different parsing patterns based on HandBrake CLI output format
-            # Pattern 1: "  Preset Name (category)"
-            if line.startswith("  "):
-                preset_name = line.strip()
-                if "(" in preset_name:
-                    preset_name = preset_name.split("(")[0].strip()
-                presets.append(preset_name)
-
-            # Pattern 2: Lines starting with preset names
-            elif not line.startswith("+") and not line.startswith("Preset") and len(line) > 3:
-                # Remove leading numbers or bullets
-                cleaned_line = line.lstrip("0123456789.- ")
-                if cleaned_line and len(cleaned_line) > 2:
-                    presets.append(cleaned_line)
+            stripped = raw_line.strip()
+            if stripped.startswith("["):
+                continue  # engine log line, e.g. "[10:35:18] hb_init: ..."
+            if stripped.startswith("+"):
+                continue  # legacy container markers
+            if stripped.endswith("/"):
+                continue  # category header, e.g. "General/"
+            indent = len(raw_line) - len(raw_line.lstrip(" "))
+            if 2 <= indent <= 6:
+                presets.append(stripped)
+            elif indent == 0:
+                # Bare non-category line (legacy "Preset (Category)" shape):
+                # strip a trailing "(...)" qualifier if present.
+                if "(" in stripped:
+                    stripped = stripped.split("(")[0].strip()
+                if len(stripped) > 2:
+                    presets.append(stripped)
+            # Deeper indents are description text — skip.
 
         # Remove duplicates and sort
         presets = list(set(presets))
@@ -319,17 +331,32 @@ class HandBrakeService:
         allowed_keys = {
             "quality",
             "encoder",
+            "vb",
             "audio",
+            "audio-lang-list",
+            "all-audio",
+            "native-language",
+            "native-dub",
             "ab",
             "ar",
             "acodec",
             "aname",
             "aencoder",
             "subtitle",
+            "subtitle-forced",
+            "subtitle-burned",
+            "subtitle-default",
+            "srt-file",
+            "srt-codeset",
+            "srt-offset",
+            "srt-lang",
+            "srt-default",
             "scodec",
             "sencoder",
             "width",
             "height",
+            "maxWidth",
+            "maxHeight",
             "crop",
             "deinterlace",
             "denoise",
@@ -406,12 +433,53 @@ class HandBrakeService:
 
         # Check disk space for output directory
         try:
-            output_disk = psutil.disk_usage(self.handbrake_path.parent)
+            output_disk = psutil.disk_usage(str(self.handbrake_path.parent))
             if output_disk.percent > 90:
                 raise ValueError(f"Disk space usage too high: {output_disk.percent:.1f}% (threshold: 90%)")
         except Exception as e:
             # If we can't check disk space, continue anyway
             logger.warning(f"Disk-space check skipped: {e}")
+
+    @staticmethod
+    @staticmethod
+    def _extract_progress(transcript: str) -> float | None:
+        """Last ``Progress.Working.Progress`` from a ``--json`` transcript.
+
+        HandBrakeCLI pretty-prints ``Progress: { ... "Working": {
+        "Progress": 0.42 ... } }`` blocks (the value is a 0..1 fraction);
+        anything else on stdout (``Version: {...}``, scan logs) is ignored.
+        Returns the value normalized to the 0..100 job scale, or None when no
+        complete progress block is present yet.
+        """
+        best: float | None = None
+        buf: list[str] = []
+        for raw in transcript.splitlines():
+            stripped = raw.strip()
+            if not buf:
+                if not stripped.startswith("Progress:"):
+                    continue
+                buf = [stripped[len("Progress:") :]]
+            else:
+                buf.append(raw)
+            chunk = "".join(buf)
+            if chunk.count("{") > chunk.count("}"):
+                continue  # incomplete object, keep buffering
+            try:
+                data = json.loads(chunk)
+            except ValueError:
+                buf = []
+                continue
+            buf = []
+            if not isinstance(data, dict):
+                continue
+            prog = data.get("Progress")
+            working = prog.get("Working", {}) if isinstance(prog, dict) else {}
+            val = working.get("Progress") if isinstance(working, dict) else None
+            if isinstance(val, bool):
+                continue
+            if isinstance(val, (int, float)):
+                best = round(float(val) * 100.0, 1) if float(val) <= 1.0 else float(val)
+        return best
 
     async def _run_transcode_job(self, job: TranscodeJob):
         """Run a transcoding job in the background."""
@@ -450,22 +518,33 @@ class HandBrakeService:
 
             job.process = process
 
-            # Process output
+            # Process output. NOTE: HandBrakeCLI --json emits *pretty-printed*
+            # multi-line objects prefixed with "Progress:", not single-line
+            # JSON, e.g.:  Progress: {\n  "Working": {\n ... "Progress": 0.42
+            # (a 0..1 fraction). Buffer the transcript and re-extract the
+            # latest value whenever a line could complete a block. (When stdout
+            # is a pipe, libc block-buffering means short encodes may deliver
+            # everything at exit — the completion path below still sets 100.)
+            transcript_parts: list[str] = []
             while True:
                 line = await process.stdout.readline()
                 if not line:
                     break
-
-                try:
-                    # Parse progress from JSON output
-                    data = json.loads(line)
-                    if "Progress" in data:
-                        job.progress = float(data["Progress"])
-                except json.JSONDecodeError:
-                    logger.debug(f"Non-JSON output: {line.decode().strip()}")
+                text = line.decode(errors="replace")
+                transcript_parts.append(text)
+                if "}" in text:
+                    val = self._extract_progress("".join(transcript_parts))
+                    if val is not None:
+                        job.progress = val
 
             # Wait for process to complete
             await process.wait()
+
+            if job.status == "cancelled":
+                # cancel_job() won the race while the process was exiting.
+                # Leave the terminal state alone instead of overwriting it.
+                logger.info(f"Transcoding cancelled (exit raced): {job.job_id}")
+                return
 
             if process.returncode == 0:
                 job.status = "completed"
@@ -503,7 +582,13 @@ class HandBrakeService:
         return True
 
     async def _run_handbrake(self, args: list[str]) -> str:
-        """Run HandBrakeCLI with the given arguments."""
+        """Run HandBrakeCLI with the given arguments.
+
+        HandBrakeCLI writes informational output (including ``--preset-list``)
+        to *stderr*, so when stdout is empty on success the stderr text is
+        returned instead. Callers that parse structured stdout (JSON progress)
+        never use this helper — only one-shot queries do.
+        """
         cmd = [str(self.handbrake_path), *args]
 
         process = await asyncio.create_subprocess_exec(
@@ -518,7 +603,10 @@ class HandBrakeService:
             error_msg = stderr.decode().strip() or "Unknown error"
             raise HandBrakeError(f"HandBrakeCLI failed: {error_msg}")
 
-        return stdout.decode().strip()
+        text = stdout.decode().strip()
+        if not text:
+            text = stderr.decode().strip()
+        return text
 
 
 # Global instance - lazy initialization

@@ -63,6 +63,11 @@ async def lifespan(mcp_instance: FastMCP):
     """Initialize and shut down background services."""
     logger.info("Initializing background services...")
 
+    from handbrake_mcp.services.activity_log import ActivityLogHandler, activity_log
+
+    logging.getLogger("handbrake_mcp").addHandler(ActivityLogHandler(activity_log))
+    activity_log.log("server", "HandBrake MCP bridge starting", meta={"transport": "dual"})
+
     # Initialize notification service
     try:
         await notification_service.initialize()
@@ -403,9 +408,122 @@ async def list_jobs():
         return _error_response("list_jobs", e, extra={"status": "error"})
 
 
+@app.get("/api/logs")
+async def get_logs(
+    limit: int = 50,
+    offset: int = 0,
+    level: str | None = None,
+    kind: str | None = None,
+    search: str | None = None,
+    sort: str = "desc",
+    after_id: str | None = None,
+    tail: bool = False,
+):
+    """Query the server activity ring (powers the Dashboard Logging page)."""
+    from handbrake_mcp.services.activity_log import activity_log
+
+    return {
+        "status": "ok",
+        **activity_log.entries(
+            limit=max(1, min(limit, 500)),
+            offset=max(0, offset),
+            level=level or None,
+            kind=kind or None,
+            search=search or None,
+            sort=sort if sort in ("asc", "desc") else "desc",
+            after_id=after_id or None,
+        ),
+    }
+
+
+@app.get("/api/logs/export")
+async def export_logs(format: str = "json"):
+    """Download the activity ring as JSON or CSV."""
+    from fastapi.responses import PlainTextResponse
+
+    from handbrake_mcp.services.activity_log import activity_log
+
+    if format not in ("json", "csv"):
+        return {"status": "error", "message": "format must be json or csv"}
+    content, media_type = activity_log.export(format)
+    return PlainTextResponse(
+        content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename=logs.{format}"},
+    )
+
+
+@app.delete("/api/logs")
+async def clear_logs():
+    """Empty the activity ring (Dashboard Clear button)."""
+    from handbrake_mcp.services.activity_log import activity_log
+
+    dropped = activity_log.clear()
+    activity_log.log("api", f"Activity log cleared ({dropped} entries dropped)")
+    return {"status": "ok", "cleared": dropped}
+
+
+@app.get("/api/browse")
+async def browse_files(path: str | None = None):
+    """Browse the *server's* filesystem for the dashboard file picker.
+
+    The webapp and the video files live on the same machine, so the picker
+    browses server-side paths (a browser `<input type=file>` would only yield
+    fake paths the backend cannot open). `path=None` lists Windows drives.
+    """
+    import string
+
+    if not path:
+        drives = []
+        for letter in string.ascii_uppercase:
+            candidate = Path(f"{letter}:\\")
+            try:
+                if candidate.exists():
+                    drives.append({"name": f"{letter}:\\", "path": str(candidate), "type": "drive"})
+            except OSError:
+                continue
+        try:
+            home = str(Path.home())
+        except Exception:
+            home = ""
+        return {"status": "ok", "cwd": "", "parent": None, "entries": drives, "home": home}
+
+    try:
+        target = Path(path).expanduser().resolve()
+    except Exception as e:
+        return {"status": "error", "message": f"Invalid path: {e}"}
+    if not target.exists() or not target.is_dir():
+        return {"status": "error", "message": "Not a directory"}
+    try:
+        entries = []
+        for child in sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name.lower())):
+            try:
+                entries.append(
+                    {
+                        "name": child.name,
+                        "path": str(child),
+                        "type": "file" if child.is_file() else "dir",
+                        "size": child.stat().st_size if child.is_file() else None,
+                    }
+                )
+            except OSError:
+                continue
+        parent = str(target.parent) if target.parent != target else None
+        return {"status": "ok", "cwd": str(target), "parent": parent, "entries": entries}
+    except Exception as e:
+        return _error_response("browse_files", e, extra={"status": "error"})
+
+
 @app.post("/api/transcode")
 async def start_transcode(data: dict):
-    """Trigger a transcoding job directly from the dashboard."""
+    """Trigger a transcoding job directly from the dashboard.
+
+    Body: `{input, output?, preset?, options?}`. `options` is a dict of
+    HandBrakeCLI flags (e.g. `{"quality": "24", "audio-lang-list": "eng"}`)
+    passed through the service allowlist (`_sanitize_options`).
+    """
+    from handbrake_mcp.services.activity_log import activity_log
+
     try:
         from handbrake_mcp.services.handbrake import get_handbrake_service
 
@@ -414,18 +532,27 @@ async def start_transcode(data: dict):
         input_path = data.get("input")
         output_path = data.get("output")
         preset = data.get("preset", settings.default_preset)
+        options = data.get("options") or {}
 
         if not input_path:
             return {"status": "error", "message": "Input path is required"}
+        if not isinstance(options, dict):
+            return {"status": "error", "message": "options must be an object"}
 
         # Default output path if not provided
         if not output_path:
             p = Path(input_path)
             output_path = str(p.with_suffix(".mkv"))
 
-        job_id = await hb.transcode(input_path, output_path, preset)
+        job_id = await hb.transcode(input_path, output_path, preset, options=options)
+        activity_log.log(
+            "api",
+            f"Job queued: {job_id}",
+            meta={"job_id": job_id, "input": str(input_path), "preset": str(preset)},
+        )
         return {"status": "ok", "job_id": job_id, "message": "Job queued successfully"}
     except Exception as e:
+        activity_log.log("api", f"Transcode rejected: {e}", level="ERROR")
         return _error_response("start_transcode", e, extra={"status": "error"})
 
 
